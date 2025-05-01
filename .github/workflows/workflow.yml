@@ -238,11 +238,3 @@ jobs:
           systemctl restart ${{ env.NAME_APP }}
             echo " ✅ ✅  ==== Go-приложение запущено! ====" 
           EOF
-
-      - name: Проверка доступности
-        run: |
-          echo "Проверка доступности GPRS по порту 50051 на localhost"
-          timeout 10 bash -c 'until echo > /dev/tcp/localhost/50051; do sleep 1; done'
-
-      - name: Финиш
-        run: echo "✅ sso_auth сервис с MongoDB был успешно запущен!"
