@@ -30,7 +30,6 @@ jobs:
         uses: webfactory/ssh-agent@v0.5.3
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
       - name: Проверка и установка Go
         run: |
           ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
@@ -53,7 +52,6 @@ jobs:
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "rm -rf ${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/"
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "mkdir -p ${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/"
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "ls -la ${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/"
-
       - name: Копирование файлов на удаленный сервер
         run: |
           sudo apt-get install -y ssh rsync
@@ -70,7 +68,6 @@ jobs:
             GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o "${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/${{env.NAME_APP}}" "${{ env.ROOT_DIR }}${{env.NAME_APP}}/server/main.go
           echo " ✅ ✅ Приложение собрано! "
           EOF
-
       - name: Установка MongoDB
         run: |
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
@@ -87,7 +84,6 @@ jobs:
           echo " ✅ MongoDB уже установлен. Установка не требуется ==== "
           fi
           EOF
-
       - name: Создание Service-файла Mongo DB
         run: |
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
