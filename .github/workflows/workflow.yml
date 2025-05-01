@@ -25,7 +25,6 @@ jobs:
     steps:
       - name: Проверка репозитория
         uses: actions/checkout@v4
-
       - name: Настройка SSH соединения
         uses: webfactory/ssh-agent@v0.5.3
         with:
@@ -57,16 +56,14 @@ jobs:
           sudo apt-get install -y ssh rsync
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} 'mkdir -p ${{ env.ROOT_DIR }}${{ env.NAME_APP }}/'
           rsync -avz --exclude='.git' ./ root@${{ env.SERVER_IP }}:${{ env.ROOT_DIR }}${{ env.NAME_APP }}/
-
       - name: Зависимости
         run:  ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "go mod tidy"
-
       - name: Сборка приложения
         run: |
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
           cd ${{ env.ROOT_DIR }}${{env.NAME_APP}}
           GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o "${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/${{env.NAME_APP}}" "${{ env.ROOT_DIR }}${{env.NAME_APP}}/server/main.go"
-          echo " ✅ ✅ Приложение собрано! "
+          echo " ✅ ✅ Приложение собрано!"
           EOF
       - name: Установка MongoDB
         run: |
@@ -106,7 +103,6 @@ jobs:
           echo "[Install]" | tee -a "$DB_SERVICE_PATH"
           echo "WantedBy=multi-user.target" | tee -a "$DB_SERVICE_PATH"
           EOF
-
       - name: Создание Service-файла Mongo DB (TEMP)
         run: |
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
