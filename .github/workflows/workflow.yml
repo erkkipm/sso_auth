@@ -13,7 +13,7 @@ jobs:
       GO111MODULE: on
       NAME_APP: sso_auth
       NAME_DB: sso_auth
-      SERVER_IP: 85.143.221.124
+      SERVER_IP: 85.143.219.160
       GO_PORT: 50051
       DB_PORT: 38838
       DB_USER: sso_auth
