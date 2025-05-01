@@ -46,7 +46,6 @@ jobs:
             echo " ✅ Go уже установлен. Пропускаем установку."
           fi
           EOF
-
       - name: Удаляем старых файлов
         run: |
 #          ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "chmod -x /etc/update-motd.d/*"
