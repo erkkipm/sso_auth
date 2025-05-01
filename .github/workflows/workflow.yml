@@ -1,0 +1,260 @@
+name: Деплой sso_auth
+
+on:
+  push:
+    branches: ["master"]
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-22.04
+
+    env:
+      GO111MODULE: on
+      NAME_APP: sso_auth
+      NAME_DB: sso_auth
+      SERVER_IP: 85.143.221.124
+      GO_PORT: 50051
+      DB_PORT: 38838
+      DB_USER: sso_auth
+      DB_PATH: /root/data/db/mongodb/
+      ROOT_DIR: /root/apps/
+      CONFIG_APP: config_prod.yaml
+      PATH_SERVICE: /etc/systemd/system/ # Путь к systemd конфигу
+
+    steps:
+      - name: Проверка репозитория
+        uses: actions/checkout@v4
+
+      - name: Настройка SSH соединения
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Проверка и установка Go
+        run: |
+          ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
+          if ! command -v go >/dev/null 2>&1; then
+            echo " ==== Установка Go... ==== "
+            curl -fsSL https://go.dev/dl/go1.21.3.linux-amd64.tar.gz -o go.tar.gz
+            rm -rf /usr/local/go
+            tar -C /usr/local -xzf go.tar.gz
+          echo 'export PATH=$PATH:/usr/local/go/bin' | tee -a /etc/profile
+          echo " ✅ ✅ Go установлен! "
+            rm go.tar.gz
+          else
+            echo " ✅ Go уже установлен. Пропускаем установку."
+          fi
+          EOF
+
+      - name: Install dependencies
+        run: go mod tidy
+
+      - name: Удаляем старых файлов
+        run: |
+#          ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "chmod -x /etc/update-motd.d/*"
+          ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "rm -f ${{ env.PATH_SERVICE }}${{ env.NAME_APP }}.service"
+          ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "rm -rf ${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/"
+          ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "mkdir -p ${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/"
+          ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "ls -la ${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/"
+
+      - name: Копирование файлов на удаленный сервер
+        run: |
+          sudo apt-get install -y ssh rsync
+          ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} 'mkdir -p ${{ env.ROOT_DIR }}${{ env.NAME_APP }}/'
+          rsync -avz --exclude='.git' ./ root@${{ env.SERVER_IP }}:${{ env.ROOT_DIR }}${{ env.NAME_APP }}/
+
+      - name: Сборка приложения
+        run: |
+          ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
+          cd ${{ env.ROOT_DIR }}${{env.NAME_APP}}
+            GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o "${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/${{env.NAME_APP}}" "${{ env.ROOT_DIR }}${{env.NAME_APP}}/server/main.go
+          echo " ✅ ✅ Приложение собрано! "
+          EOF
+
+      - name: Установка MongoDB
+        run: |
+          ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
+          if ! dpkg -l | grep -q mongodb-org; then
+          echo " ==== Установка MongoDB . . .  ==== "
+          curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | gpg --dearmor > mongodb-server-7.0.gpg
+          mv mongodb-server-7.0.gpg /etc/apt/trusted.gpg.d/
+          wget -qO - https://www.mongodb.org/static/pgp/server-7.0.asc | gpg --dearmor > /usr/share/keyrings/mongo.gpg
+          echo 'deb [ signed-by=/usr/share/keyrings/mongo.gpg arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse' | tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+          apt update || { echo "Ошибка обновления"; exit 1; }
+          apt install -y mongodb-org || { echo "Ошибка установки MongoDB"; exit 1; }
+          echo " ✅ ✅ Установка MongoDB завершена ==== "
+          else
+          echo " ✅ MongoDB уже установлен. Установка не требуется ==== "
+          fi
+          EOF
+
+      - name: Создание Service-файла Mongo DB
+        run: |
+          ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
+          DB_SERVICE_PATH=${{ env.PATH_SERVICE }}mongobd_${{ env.NAME_APP }}.service
+          if [ -f $DB_SERVICE_PATH ]; then
+            rm $DB_SERVICE_PATH
+          fi
+          touch $DB_SERVICE_PATH
+          chmod 600 $DB_SERVICE_PATH
+          chown root:root $DB_SERVICE_PATH
+          echo "[Unit]" | tee "$DB_SERVICE_PATH"
+          echo "Description=Start MongoDB (Auth)" | tee -a "$DB_SERVICE_PATH"
+          echo "After=network.target" | tee -a "$DB_SERVICE_PATH"
+          echo "[Service]" | tee -a "$DB_SERVICE_PATH"
+          echo "User=root" | tee -a "$DB_SERVICE_PATH"
+          echo "Group=mongodb" | tee -a "$DB_SERVICE_PATH"
+          echo "ExecStart=/usr/bin/mongod --port ${{ env.DB_PORT }} --dbpath=${{ env.DB_PATH }}${{ env.NAME_DB }}/ --auth" | tee -a "$DB_SERVICE_PATH"
+          echo "Restart=always" | tee -a "$DB_SERVICE_PATH"
+          echo "RestartSec=5" | tee -a "$DB_SERVICE_PATH"
+          echo "[Install]" | tee -a "$DB_SERVICE_PATH"
+          echo "WantedBy=multi-user.target" | tee -a "$DB_SERVICE_PATH"
+          EOF
+
+      - name: Создание Service-файла Mongo DB (TEMP)
+        run: |
+          ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
+          DB_SERVICE_PATH=${{ env.PATH_SERVICE }}mongobd_${{ env.NAME_APP }}_tmp.service 
+          if [ -f "$DB_SERVICE_PATH" ]; then
+            rm $DB_SERVICE_PATH
+          fi
+          touch $DB_SERVICE_PATH
+          chmod 600 $DB_SERVICE_PATH
+          chown root:root $DB_SERVICE_PATH
+          
+          echo "[Unit]" | tee "$DB_SERVICE_PATH"
+          echo "Description=Start MongoDB (No Auth)" | tee -a "$DB_SERVICE_PATH"
+          echo "After=network.target" | tee -a "$DB_SERVICE_PATH"
+          echo "[Service]" | tee -a "$DB_SERVICE_PATH"
+          echo "User=root" | tee -a "$DB_SERVICE_PATH"
+          echo "Group=mongodb" | tee -a "$DB_SERVICE_PATH"
+          echo "ExecStart=/usr/bin/mongod --port ${{ env.DB_PORT }} --dbpath=${{ env.DB_PATH }}${{ env.NAME_DB }}/ --noauth" | tee -a "$DB_SERVICE_PATH"
+          echo "Restart=no" | tee -a "$DB_SERVICE_PATH"
+          echo "[Install]" | tee -a "$DB_SERVICE_PATH"
+          echo "WantedBy=multi-user.target" | tee -a "$DB_SERVICE_PATH"
+          EOF
+
+      - name: Останавливаем MongoDB
+        run: |
+          ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
+          echo "===== Останавливаем MongoDB . . .  ====== "
+          DB_SERVICE_FILE=mongobd_${{ env.NAME_APP }}.service
+          DB_SERVICE_PATH=${{ env.PATH_SERVICE }}mongobd_${{ env.NAME_APP }}.service
+          DB_SERVICE_TMP_FILE=mongobd_${{ env.NAME_APP }}_tmp.service
+          DB_SERVICE_TMP_PATH=${{ env.PATH_SERVICE }}mongobd_${{ env.NAME_APP }}_tmp.service
+          mkdir -p ${{ env.DB_PATH }}${{ env.NAME_DB }}/
+          
+          systemctl disable $DB_SERVICE_FILE     
+          if systemctl is-active --quiet $DB_SERVICE_PATH; then
+          echo " ❌ ✅ MongoDB активен, останавливаем..."
+          systemctl stop $DB_SERVICE_FILE
+          else
+          echo " ✅ MongoDB не запущен."
+          fi
+          
+          
+          systemctl disable $DB_SERVICE_TMP_FILE
+          if systemctl is-active --quiet $DB_SERVICE_TMP_PATH; then
+          echo " ❌ ✅ MongoDB(tmp) активен, останавливаем..."
+          systemctl stop $DB_SERVICE_TMP_FILE
+          else
+          echo " ✅ MongoDB(tmp) не запущен"
+          fi
+          
+          EOF
+
+      - name: Создаем пользователя с правами на чтение и запись
+        run: |
+          ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
+          DB_SERVICE_FILE=${{ env.PATH_SERVICE }}mongobd_${{ env.NAME_APP }}.service
+          DB_SERVICE_TMP_FILE=mongobd_${{ env.NAME_APP }}_tmp.service
+          
+          pid=$(ss -tunlp | grep ":${{ env.DB_PORT }}" | awk '{print $7}' | cut -d ',' -f 2 | tr -d 'pid=' || echo "")
+          
+          if [ ! -z "$pid" ]; then
+          echo " Найден PID процесса MongoDB: $pid "
+          kill -9 $pid
+          echo " ❌ ✅ MongoDB завершен принудительно"
+          else
+          echo " ✅ ✅ Процессы на порту ${{ env.DB_PORT }} закрыты и запускаем неавторизованный MongoDB"
+          fi
+          systemctl daemon-reload && systemctl restart $DB_SERVICE_TMP_FILE
+          sleep 3
+
+          mongosh --port ${{ env.DB_PORT }} --eval "
+          
+          db = db.getSiblingDB('admin');
+          if (!db.getUser('${{ env.DB_USER }}')) {
+            db.createUser({ user: '${{ env.DB_USER }}', pwd: '${{ secrets.DB_PASS }}', roles: [ { role: 'root', db: 'admin' } ] });
+            print(' ✅ ✅ Пользователь ${{ env.DB_USER }} создан в admin.');
+          } else {
+            print(' ✅ Пользователь ${{ env.DB_USER }} уже существует в admin.');
+          }
+
+          db = db.getSiblingDB('${{ env.NAME_DB }}');
+          if (!db.getUser('${{ env.DB_USER }}')) {
+            db.createUser({ user: '${{ env.DB_USER }}', pwd: '${{ secrets.DB_PASS }}', roles: [ { role: 'dbOwner', db: '${{ env.NAME_DB }}' } ] });
+            print(' ✅  ✅ Пользователь ${{ env.DB_USER }} создан в ${{ env.NAME_DB }}.');
+          } else {
+            print(' ✅ Пользователь ${{ env.DB_USER }} уже существует в ${{ env.NAME_DB }}.');
+          }"
+          
+          systemctl stop $DB_SERVICE_TMP_FILE
+          
+          if ss -tunlp | grep ":${{ env.DB_PORT }}" > /dev/null; then
+            echo " ❌ Остался открытым порт ${{ env.DB_PORT }}"
+          else 
+            echo " ✅ ✅ Все соединений на порту MongoDB успешно завершены!"
+          fi
+          EOF
+
+      - name: Запуск MongoDB
+        run: |
+          ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF' 
+          DB_SERVICE_FILE=mongobd_${{ env.NAME_APP }}.service
+          systemctl daemon-reload && sudo systemctl restart $DB_SERVICE_FILE && systemctl enable $DB_SERVICE_FILE && systemctl status $DB_SERVICE_FILE
+          EOF
+
+      - name: Создание systemd и запуск GO-приложения
+        run: |
+          ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'          
+          set -e
+            SERVICE_APP="${{ env.PATH_SERVICE }}${{ env.NAME_APP }}.service"
+            if [ ! -f $SERVICE_APP ]; then
+              touch $SERVICE_APP
+              chmod 600 $SERVICE_APP
+              chown root:root $SERVICE_APP
+          
+              echo "[Unit]" | tee "$SERVICE_APP"
+              echo "Description=Go Application" | tee -a "$SERVICE_APP"
+              echo "After=network.target" | tee -a "$SERVICE_APP"
+          
+              echo "[Service]" | tee -a "$SERVICE_APP"
+              echo "ExecStart=${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/${{env.NAME_APP}} --config=${{ env.ROOT_DIR }}${{env.NAME_APP}}/configs/${{env.CONFIG_APP}}" | tee -a "$SERVICE_APP"
+              echo "WorkingDirectory=${{ env.ROOT_DIR }}${{env.NAME_APP}}" | tee -a "$SERVICE_APP"
+              echo "Restart=always" | tee -a "$SERVICE_APP"
+              echo "StandardOutput=inherit" | tee -a "$SERVICE_APP"
+              echo "User=root" | tee -a "$SERVICE_APP"
+              echo "Environment=PORT=${{ env.GO_PORT }}" | tee -a "$SERVICE_APP"
+          
+          
+              echo "[Install]" | tee -a "$SERVICE_APP"
+              echo "WantedBy=multi-user.target" | tee -a "$SERVICE_APP"
+            fi
+
+          systemctl daemon-reload
+          if ! systemctl is-enabled --quiet ${{ env.NAME_APP }}; then
+          systemctl enable ${{ env.NAME_APP }}
+          fi
+          systemctl restart ${{ env.NAME_APP }}
+            echo " ✅ ✅  ==== Go-приложение запущено! ====" 
+          EOF
+
+      - name: Проверка доступности
+        run: |
+          echo "Проверка доступности GPRS по порту 50051 на localhost"
+          timeout 10 bash -c 'until echo > /dev/tcp/localhost/50051; do sleep 1; done'
+
+      - name: Финиш
+        run: echo "✅ sso_auth сервис с MongoDB был успешно запущен!"

@@ -1,0 +1,18 @@
+env:  "prod" # dev, test, prod, local
+name_project: "sso_auth"
+max_concurrent_connections: 5
+host: "localhost"
+http:
+  ip: 85.143.221.124
+  port: 50051
+  read-timeout: "400s"
+  write-timeout: "400s"
+mongodb:
+  host: localhost
+  port: "38838"
+  username: sso_auth
+  password: ErkkiSofit9944
+  database: sso_auth
+  auth_db: admin
+  mongodb_collection:
+    users: users
