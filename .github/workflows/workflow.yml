@@ -46,7 +46,6 @@ jobs:
           EOF
       - name: Удаляем старых файлов
         run: |
-#          ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "chmod -x /etc/update-motd.d/*"
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "rm -f ${{ env.PATH_SERVICE }}${{ env.NAME_APP }}.service"
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "rm -rf ${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/"
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "mkdir -p ${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/"
