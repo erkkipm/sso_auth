@@ -55,8 +55,6 @@ jobs:
           sudo apt-get install -y ssh rsync
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} 'mkdir -p ${{ env.ROOT_DIR }}${{ env.NAME_APP }}/'
           rsync -avz --exclude='.git' ./ root@${{ env.SERVER_IP }}:${{ env.ROOT_DIR }}${{ env.NAME_APP }}/
-      - name: Зависимости
-        run:  ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "go mod tidy"
       - name: Сборка приложения
         run: |
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
