@@ -15,7 +15,7 @@ func main() {
 		log.Fatal("Ошибка порта:", err)
 	}
 
-	store, err := storage.NewStorage("mongodb://localhost:38838", "authsofit", "users")
+	store, err := storage.NewStorage("mongodb://localhost:38838", "sso_auth", "users")
 	if err != nil {
 		log.Fatal("Mongo ошибка:", err)
 	}

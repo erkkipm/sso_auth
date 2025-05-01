@@ -4,7 +4,7 @@ max_concurrent_connections: 5
 host: "localhost"
 http:
   ip: 85.143.219.160
-  port: 50051
+  port: "50051"
   read-timeout: "400s"
   write-timeout: "400s"
 mongodb:
