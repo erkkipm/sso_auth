@@ -57,12 +57,21 @@ jobs:
           sudo apt-get install -y ssh rsync
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} 'mkdir -p ${{ env.ROOT_DIR }}${{ env.NAME_APP }}/'
           rsync -avz --exclude='.git' ./ root@${{ env.SERVER_IP }}:${{ env.ROOT_DIR }}${{ env.NAME_APP }}/
-      - name: Сборка приложения
+      - name: Проверка и установка Proto
+        run: |
+          ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
+          apt update -y && apt install -y protobuf-compiler || { echo "Ошибка установки Protobuf"; exit 1; }
+          EOF
+      - name: Генерация Proto-кода
         run: |
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
           mkdir -p ${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }} && echo " ✅  Папка "${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }}" создана!" || echo " ❌  Папка "${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }}" не сгенерирована!"
-          protoc --go_out=${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }} --go_opt=paths=source_relative --go-grpc_out=${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }} --go-grpc_opt=paths=source_relative ${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.PROTO_DIR }}/*.proto && echo " ✅  Proto-Код сгенерирован!" || echo " ❌  Proto-Код не сгенерирован!"
-          cd ${{ env.ROOT_DIR }}${{env.NAME_APP}}
+          protoc --go_out=${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }} --go_opt=paths=source_relative --go-grpc_out=${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }} --go-grpc_opt=paths=source_relative ${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.PROTO_DIR }}/*.proto && echo " ✅  Proto-Код сгенерирован!" || { echo " ❌  Proto-Код не сгенерирован!"; exit 1; }
+          EOF
+      - name: Сборка приложения
+        run: |
+          ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
+          cd ${{ env.ROOT_DIR }}${{env.NAME_APP}} &&
           GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o "${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/${{env.NAME_APP}}" "${{ env.ROOT_DIR }}${{env.NAME_APP}}/server/main.go" &&  echo " ✅ ✅ Приложение собрано!" || echo " ❌ ❌ ОШИБКА в коде Приложения!"
           EOF
       - name: Установка MongoDB
