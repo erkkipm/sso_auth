@@ -10,7 +10,7 @@ CONFIG_APP = ./configs/config_prod.yaml
 ROOT_DIR = /Users/erkkipuolakainen/go/src/github.com/erkkipm/sso_auth/
 PATH_SERVICE = /etc/systemd/system/
 DB_PATH = /Users/erkkipuolakainen/data/db/
-PROTO_FILE = ./proto/auth.proto
+PROTO_DIR = ./proto/
 GEN_DIR = ./gen/
 GO_PACKAGE = github.com/erkkipm/sso_auth
 
@@ -42,7 +42,7 @@ gen:
 	mkdir -p $(GEN_DIR)
 	protoc --go_out=$(GEN_DIR) --go_opt=paths=source_relative \
 	       --go-grpc_out=$(GEN_DIR) --go-grpc_opt=paths=source_relative \
-	       $(PROTO_FILE) && echo " ✅  Код сгенерирован!" || echo " ❌  Код не сгенерирован!"
+	       $(PROTO_DIR)/*.proto && echo " ✅  Код сгенерирован!" || echo " ❌  Код не сгенерирован!"
 
 .PHONY: stop start create-user get-users restart
 stop:
