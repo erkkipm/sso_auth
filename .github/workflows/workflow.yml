@@ -49,6 +49,7 @@ jobs:
       - name: Удаляем старых файлов
         run: |
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "rm -f ${{ env.PATH_SERVICE }}${{ env.NAME_APP }}.service"
+           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "rm -rf ${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }}"
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "rm -rf ${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/"
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "mkdir -p ${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/"
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "ls -la ${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/"
