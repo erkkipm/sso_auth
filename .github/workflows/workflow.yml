@@ -57,37 +57,39 @@ jobs:
           sudo apt-get install -y ssh rsync
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} 'mkdir -p ${{ env.ROOT_DIR }}${{ env.NAME_APP }}/'
           rsync -avz --exclude='.git' ./ root@${{ env.SERVER_IP }}:${{ env.ROOT_DIR }}${{ env.NAME_APP }}/
-      - name: Проверка и установка Proto
+      - name: Проверка и установка Proto и плагинов
         run: |
           ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
-          # Проверка и установка protoc-gen-go
+          apt update -y && apt install -y protobuf-compiler golang-go git curl unzip || { echo "❌ Ошибка установки зависимостей"; exit 1; }
+          
+          export PATH=$PATH:/usr/local/go/bin:$(go env GOPATH)/bin
+          
           if ! command -v protoc-gen-go >/dev/null 2>&1; then
-          echo " ==== Устанавливаем protoc-gen-go... ==== "
-          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-            echo " ✅ ✅ protoc-gen-go установлен! "
-          else
-            echo " ✅ protoc-gen-go уже установлен. Пропускаем установку."
+            echo " ==== Устанавливаем protoc-gen-go... ==== "
+            go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
           fi
           
-          # Проверка и установка protoc-gen-go-grpc
           if ! command -v protoc-gen-go-grpc >/dev/null 2>&1; then
-          echo " ==== Устанавливаем protoc-gen-go-grpc... ==== "
-          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
-            echo " ✅ ✅ Proto protoc-gen-go-grpc установлен! "
-          else
-            echo " ✅ Proto protoc-gen-go-grpc уже установлен. Пропускаем установку."
+            echo " ==== Устанавливаем protoc-gen-go-grpc... ==== "
+            go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
           fi
+          
+          echo "✅ Протокол буферы и плагины установлены!"
           EOF
+
       - name: Генерация Proto-кода
         run: |
-          ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
-          mkdir -p ${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }} && echo " ✅  Папка "${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }}" создана!" || echo " ❌  Папка "${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }}" не сгенерирована!"
-          protoc -I=${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }} \
-          --go_out=${{ env.ROOT_DIR }}${{env.NAME_APP}}/gen/ \
-          --go_opt=paths=source_relative \
-          --go-grpc_out=${{ env.ROOT_DIR }}${{env.NAME_APP}}/gen/ \
-          --go-grpc_opt=paths=source_relative \
-          ${{ env.ROOT_DIR }}${{env.NAME_APP}}/proto/*.proto
+          ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
+          export PATH=$PATH:/usr/local/go/bin:$(go env GOPATH)/bin
+      
+          mkdir -p ${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }} && echo " ✅ Папка для ген-кода создана!" || echo " ❌ Ошибка при создании папки!"
+      
+          protoc -I=${{ env.ROOT_DIR }}${{ env.NAME_APP }}/proto \
+            --go_out=${{ env.ROOT_DIR }}${{ env.NAME_APP }}${{ env.GEN_DIR }} \
+            --go_opt=paths=source_relative \
+            --go-grpc_out=${{ env.ROOT_DIR }}${{ env.NAME_APP }}${{ env.GEN_DIR }} \
+            --go-grpc_opt=paths=source_relative \
+            ${{ env.ROOT_DIR }}${{ env.NAME_APP }}/proto/*.proto && echo "✅ Proto-Код сгенерирован!" || { echo "❌ Proto-Код не сгенерирован!"; exit 1; }
           EOF
       - name: Сборка приложения
         run: |
