@@ -34,16 +34,20 @@ jobs:
       - name: Проверка и установка Go
         run: |
           ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
-          if ! command -v go >/dev/null 2>&1; then
-            echo " ==== Установка Go... ==== "
-            curl -fsSL https://go.dev/dl/go1.21.3.linux-amd64.tar.gz -o go.tar.gz
+          REQUIRED_GO_VERSION="1.21.3"
+          INSTALLED_VERSION=$(go version 2>/dev/null | awk '{print $3}' | sed 's/go//') || INSTALLED_VERSION="none"
+          if [ "$INSTALLED_VERSION" != "$REQUIRED_GO_VERSION" ]; then
+            echo " ==== Устанавливаем Go $REQUIRED_GO_VERSION ==== "
+            curl -fsSL https://go.dev/dl/go${REQUIRED_GO_VERSION}.linux-amd64.tar.gz -o go.tar.gz
             rm -rf /usr/local/go
             tar -C /usr/local -xzf go.tar.gz
-          echo 'export PATH=$PATH:/usr/local/go/bin' | tee -a /etc/profile
-          echo " ✅ ✅ Go установлен! "
             rm go.tar.gz
+        
+            echo 'export PATH=$PATH:/usr/local/go/bin' | tee -a /etc/profile
+            export PATH=$PATH:/usr/local/go/bin
+            echo " ✅ Go $REQUIRED_GO_VERSION установлен!"
           else
-            echo " ✅ Go уже установлен. Пропускаем установку."
+          echo " ✅ Go уже версии $REQUIRED_GO_VERSION. Пропускаем установку."
           fi
           EOF
       - name: Удаление старых файлов
