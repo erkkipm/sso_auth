@@ -15,13 +15,20 @@ GEN_DIR = ./gen/
 GO_PACKAGE = github.com/erkkipm/sso_auth
 
 .PHONY: all
-all: stop deps clean build gen start get-users run
+all: stop deps clean gen build start get-users run
 
 .PHONY: run
 run:
 	echo "======= Запуск приложения ========"
 	go run $(APP_MAIN) && echo " ✅  Приложение запущено!" || echo " ❌  Приложение не запущено!"
 
+.PHONY: gen
+gen:
+	echo "======= Генерация кода ========"
+	mkdir -p $(GEN_DIR)
+	protoc --go_out=$(GEN_DIR) --go_opt=paths=source_relative \
+	       --go-grpc_out=$(GEN_DIR) --go-grpc_opt=paths=source_relative \
+	       $(PROTO_DIR)/*.proto && echo " ✅  Код сгенерирован!" || echo " ❌  Код не сгенерирован!"
 
 .PHONY: build
 build:
@@ -35,14 +42,6 @@ clean:
 	echo "======= Удаление старых файлов ========"
 	rm -rf $(APP_BIN) && echo " ✅  "$(APP_BIN)" удалено!" || echo " ❌  "$(APP_BIN)" не удалено!"
 	rm -f $(GEN_DIR)/*.pb.go && echo " ✅  "$(GEN_DIR)" удалено!" || echo " ❌  "$(GEN_DIR)" не удалено!"
-
-.PHONY: gen
-gen:
-	echo "======= Генерация кода ========"
-	mkdir -p $(GEN_DIR)
-	protoc --go_out=$(GEN_DIR) --go_opt=paths=source_relative \
-	       --go-grpc_out=$(GEN_DIR) --go-grpc_opt=paths=source_relative \
-	       $(PROTO_DIR)/*.proto && echo " ✅  Код сгенерирован!" || echo " ❌  Код не сгенерирован!"
 
 .PHONY: stop start create-user get-users restart
 stop:
