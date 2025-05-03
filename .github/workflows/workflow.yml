@@ -60,13 +60,29 @@ jobs:
       - name: Проверка и установка Proto
         run: |
           ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
-          apt update -y && apt install -y protobuf-compiler || { echo "Ошибка установки Protobuf"; exit 1; }
+          # Проверка и установка protoc-gen-go
+          if ! command -v protoc-gen-go >/dev/null 2>&1; then
+          echo " ==== Устанавливаем protoc-gen-go... ==== "
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+            echo " ✅ ✅ protoc-gen-go установлен! "
+          else
+            echo " ✅ protoc-gen-go уже установлен. Пропускаем установку."
+          fi
+          
+          # Проверка и установка protoc-gen-go-grpc
+          if ! command -v protoc-gen-go-grpc >/dev/null 2>&1; then
+          echo " ==== Устанавливаем protoc-gen-go-grpc... ==== "
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+            echo " ✅ ✅ Proto protoc-gen-go-grpc установлен! "
+          else
+            echo " ✅ Proto protoc-gen-go-grpc уже установлен. Пропускаем установку."
+          fi
           EOF
       - name: Генерация Proto-кода
         run: |
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
           mkdir -p ${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }} && echo " ✅  Папка "${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }}" создана!" || echo " ❌  Папка "${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }}" не сгенерирована!"
-          protoc --go_out=${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }} --go_opt=paths=source_relative --go-grpc_out=${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }} --go-grpc_opt=paths=source_relative ${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.PROTO_DIR }}/*.proto && echo " ✅  Proto-Код сгенерирован!" || { echo " ❌  Proto-Код не сгенерирован!"; exit 1; }
+          protoc --go_out=${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }} --go_opt=paths=source_relative --go-grpc_out=${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }} --go-grpc_opt=paths=source_relative ${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.PROTO_DIR }}*.proto && echo " ✅  Proto-Код сгенерирован!" || { echo " ❌  Proto-Код не сгенерирован!"; exit 1; }
           EOF
       - name: Сборка приложения
         run: |
