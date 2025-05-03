@@ -23,6 +23,7 @@ jobs:
       PATH_SERVICE: /etc/systemd/system/ # Путь к systemd конфигу
       PROTO_DIR: /proto/
       GEN_DIR: /gen/
+      GO_VERSION: 1.23.0
 
     steps:
       - name: Проверка репозитория
@@ -34,7 +35,7 @@ jobs:
       - name: Проверка и установка Go
         run: |
           ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
-          REQUIRED_GO_VERSION="1.21.3"
+          REQUIRED_GO_VERSION="${{ env.GO_VERSION }} "
           INSTALLED_VERSION=$(go version 2>/dev/null | awk '{print $3}' | sed 's/go//') || INSTALLED_VERSION="none"
           if [ "$INSTALLED_VERSION" != "$REQUIRED_GO_VERSION" ]; then
             echo " ==== Устанавливаем Go $REQUIRED_GO_VERSION ==== "
