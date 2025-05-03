@@ -2,10 +2,10 @@ package handlers
 
 import (
 	"context"
+	ssoapb "github.com/erkkipm/sso_auth/gen/proto"
 	"github.com/erkkipm/sso_auth/internal/models"
 	"github.com/erkkipm/sso_auth/internal/storage"
 	"github.com/erkkipm/sso_auth/pkg/jwtutil"
-	"github.com/erkkipm/sso_auth/proto/proto"
 	"golang.org/x/crypto/bcrypt"
 	"time"
 )

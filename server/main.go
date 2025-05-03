@@ -1,9 +1,9 @@
 package main
 
 import (
+	ssoapb "github.com/erkkipm/sso_auth/gen/proto"
 	"github.com/erkkipm/sso_auth/internal/handlers"
 	"github.com/erkkipm/sso_auth/internal/storage"
-	"github.com/erkkipm/sso_auth/proto/proto"
 	"google.golang.org/grpc"
 	"log"
 	"net"
@@ -15,7 +15,7 @@ func main() {
 		log.Fatal("Ошибка порта:", err)
 	}
 
-	store, err := storage.NewStorage("mongodb://localhost:38838", "sso_auth", "users")
+	store, err := storage.NewStorage("mongodb://localhost:38838", "sso_auth", "r")
 	if err != nil {
 		log.Fatal("Mongo ошибка:", err)
 	}
