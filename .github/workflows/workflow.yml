@@ -50,7 +50,7 @@ jobs:
         run: |
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} 'rm -f ${{ env.PATH_SERVICE }}${{ env.NAME_APP }}.service || { echo "❌ Не удалось удалить systemd файл"; cd ${{ env.PATH_SERVICE }}; ls; }'
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} 'rm -rf ${{ env.ROOT_DIR }}${{ env.NAME_APP }}${{ env.GEN_DIR }} || { echo "❌ Не удалось удалить папку gen"; cd ${{ env.ROOT_DIR }}${{ env.NAME_APP }}${{ env.GEN_DIR }}; ls; }'
-          ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} 'rm -rf ${{ env.ROOT_DIR }}${{ env.NAME_APP }}/build/' || { echo "❌ Не удалось удалить папку build"; cd ${{ env.ROOT_DIR }}${{ env.NAME_APP }}/build/; ls; }'
+          ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} 'rm -rf ${{ env.ROOT_DIR }}${{ env.NAME_APP }}/build/ || { echo "❌ Не удалось удалить папку build"; cd ${{ env.ROOT_DIR }}${{ env.NAME_APP }}/build/; ls; }'
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} 'mkdir -p ${{ env.ROOT_DIR }}${{ env.NAME_APP }}/build/'
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} 'ls -la ${{ env.ROOT_DIR }}${{ env.NAME_APP }}/build/'
       - name: Копирование файлов на удаленный сервер
