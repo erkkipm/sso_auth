@@ -82,7 +82,12 @@ jobs:
         run: |
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
           mkdir -p ${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }} && echo " ✅  Папка "${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }}" создана!" || echo " ❌  Папка "${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }}" не сгенерирована!"
-          protoc --go_out=${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }} --go_opt=paths=source_relative --go-grpc_out=${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }} --go-grpc_opt=paths=source_relative ${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.PROTO_DIR }}*.proto && echo " ✅  Proto-Код сгенерирован!" || { echo " ❌  Proto-Код не сгенерирован!"; exit 1; }
+          protoc -I=${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }} \
+          --go_out=${{ env.ROOT_DIR }}${{env.NAME_APP}}/gen/ \
+          --go_opt=paths=source_relative \
+          --go-grpc_out=${{ env.ROOT_DIR }}${{env.NAME_APP}}/gen/ \
+          --go-grpc_opt=paths=source_relative \
+          ${{ env.ROOT_DIR }}${{env.NAME_APP}}/proto/*.proto
           EOF
       - name: Сборка приложения
         run: |
