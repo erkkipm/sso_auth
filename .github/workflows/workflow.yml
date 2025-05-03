@@ -96,8 +96,10 @@ jobs:
       - name: Сборка приложения
         run: |
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
+          cd /root/apps/sso_auth
+          sed -i '/^toolchain /d' go.mod
+          sed -i 's/^go 1\.23\.0/go 1.23/' go.mod
           go mod tidy && echo " ✅  Зависимости установлены!" || echo " ❌  Зависимости не установлены!"
-          cd ${{ env.ROOT_DIR }}${{env.NAME_APP}} &&
           GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o "${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/${{env.NAME_APP}}" "${{ env.ROOT_DIR }}${{env.NAME_APP}}/server/main.go" &&  echo " ✅ ✅ Приложение собрано!" || { echo " ❌ ❌ ОШИБКА в коде Приложения!"; exit 1; }
           EOF
       - name: Установка MongoDB
