@@ -48,8 +48,8 @@ jobs:
           EOF
       - name: Удаляем старых файлов
         run: |
-          ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "rm -f ${{ env.PATH_SERVICE }}${{ env.NAME_APP }}.service"
-           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "rm -rf ${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }}"
+          ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "rm -f ${{ env.PATH_SERVICE }}${{ env.NAME_APP }}.service || {echo \" ❌  Не удалось удалить  файл \"${{ env.PATH_SERVICE }}${{ env.NAME_APP }}\".service\"; cd ${{ env.PATH_SERVICE }}; ls }"
+          ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "rm -rf ${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }}" || {echo \" ❌  Не удалось удалить папку \" ${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }}; cd ${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }}; ls }"
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "rm -rf ${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/"
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "mkdir -p ${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/"
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "ls -la ${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/"
