@@ -16,3 +16,9 @@ mongodb:
   auth_db: admin
   mongodb_collection:
     users: users
+
+
+    port: ":50051"
+    mongo_uri: "mongodb://localhost:38838"
+    database: "sso_auth"
+    password: "ErkkiSofit9944"

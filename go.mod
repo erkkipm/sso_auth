@@ -2,6 +2,8 @@ module github.com/erkkipm/sso_auth
 
 go 1.23.0
 
+toolchain go1.23.8
+
 require (
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	go.mongodb.org/mongo-driver v1.17.3
