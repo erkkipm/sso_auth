@@ -281,32 +281,50 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'          
           set -e
-            SERVICE_APP="${{ env.PATH_SERVICE }}${{ env.NAME_APP }}.service"
-            if [ ! -f $SERVICE_APP ]; then
-              touch $SERVICE_APP
-              chmod 600 $SERVICE_APP
-              chown root:root $SERVICE_APP
-              echo "[Unit]" | tee "$SERVICE_APP"
-              echo "Description=Go Application" | tee -a "$SERVICE_APP"
-              echo "After=network.target" | tee -a "$SERVICE_APP"         
-              echo "[Service]" | tee -a "$SERVICE_APP"
-              echo "ExecStart=${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/${{env.NAME_APP}} --config=${{ env.ROOT_DIR }}${{env.NAME_APP}}/configs/${{env.CONFIG_APP}}" | tee -a "$SERVICE_APP"
-              echo "WorkingDirectory=${{ env.ROOT_DIR }}${{env.NAME_APP}}" | tee -a "$SERVICE_APP"
-              echo "Restart=always" | tee -a "$SERVICE_APP"
-              echo "StandardOutput=inherit" | tee -a "$SERVICE_APP"
-              echo "User=root" | tee -a "$SERVICE_APP"
-              echo "Environment=PORT=${{ env.GO_PORT }}" | tee -a "$SERVICE_APP"        
-              echo "[Install]" | tee -a "$SERVICE_APP"
-              echo "WantedBy=multi-user.target" | tee -a "$SERVICE_APP"
-            fi
-            systemctl daemon-reload 
-            systemctl enable --now ${{ env.NAME_APP }}
-            systemctl status ${{ env.NAME_APP }}
-            if systemctl is-active --quiet ${{ env.NAME_APP }}; then
-              echo "✅ ✅ Приложение ${{ env.NAME_APP }} успешно запущено и активно."
-            else
-              journalctl -u fortis -n 50
-              echo "❌ ❌ Приложение ${{ env.NAME_APP }} не запустилось." >&2
-              exit 1
-            fi
+          SERVICE_APP="${{ env.PATH_SERVICE }}${{ env.NAME_APP }}.service"
+
+          echo "🧹 Удаление предыдущего systemd unit-файла, если существует..."
+          if systemctl is-active --quiet ${{ env.NAME_APP }}; then
+            echo "⛔ Останавливаем текущее приложение..."
+            systemctl stop ${{ env.NAME_APP }}
+          fi
+          if [ -f "$SERVICE_APP" ]; then
+            echo "🗑 Удаляем старый unit-файл..."
+            rm -f "$SERVICE_APP"
+          fi
+
+          echo "📦 Создаем новый unit-файл..."
+          tee "$SERVICE_APP" > /dev/null <<EOL
+          [Unit]
+          Description=Go Application
+          After=network.target
+          
+          [Service]
+          ExecStart=${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/${{env.NAME_APP}} --config=${{ env.ROOT_DIR }}${{env.NAME_APP}}/configs/${{env.CONFIG_APP}}
+          WorkingDirectory=${{ env.ROOT_DIR }}${{env.NAME_APP}}
+          Restart=always
+          StandardOutput=inherit
+          User=root
+          Environment=PORT=${{ env.GO_PORT }}
+          
+          [Install]
+          WantedBy=multi-user.target
+          EOL
+          
+          chmod 600 "$SERVICE_APP"
+          chown root:root "$SERVICE_APP"
+          
+          echo "🔄 Перезагрузка systemd и запуск сервиса..."
+          systemctl daemon-reexec
+          systemctl daemon-reload
+          systemctl enable --now ${{ env.NAME_APP }}
+          
+          systemctl status ${{ env.NAME_APP }}
+          if systemctl is-active --quiet ${{ env.NAME_APP }}; then
+          echo "✅ ✅ Приложение ${{ env.NAME_APP }} успешно запущено и активно."
+          else
+          journalctl -u ${{ env.NAME_APP }} -n 50
+          echo "❌ ❌ Приложение ${{ env.NAME_APP }} не запустилось." >&2
+          exit 1
+          fi
           EOF
