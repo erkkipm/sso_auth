@@ -1,12 +1,13 @@
-env:  "prod" # dev, test, prod, local
-name_project: "sso_auth"
-max_concurrent_connections: 5
-host: "localhost"
+#env:  "prod" # dev, test, prod, local
+#name_project: "sso_auth"
+#max_concurrent_connections: 5
+#host: "localhost"
+jwt_key: ErkkiSofit9944
 http:
-  ip: 85.143.219.160
+#  ip: 85.143.219.160
   port: "50051"
-  read-timeout: "400s"
-  write-timeout: "400s"
+#  read-timeout: "400s"
+#  write-timeout: "400s"
 mongodb:
   host: localhost
   port: "38838"
@@ -16,9 +17,7 @@ mongodb:
   auth_db: admin
   mongodb_collection:
     users: users
-
-
-    port: ":50051"
-    mongo_uri: "mongodb://localhost:38838"
-    database: "sso_auth"
-    password: "ErkkiSofit9944"
+#    port: ":50051"
+#    mongo_uri: "mongodb://localhost:38838"
+#    database: "sso_auth"
+#    password: "ErkkiSofit9944"

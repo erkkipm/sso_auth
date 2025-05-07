@@ -29,9 +29,9 @@ func (a *AuthServer) Register(ctx context.Context, r *ssoapb.RegisterRequest) (*
 		CreatedAt: time.Now(),
 	}
 	if err := a.Store.CreateUser(ctx, user); err != nil {
-		return &ssoapb.RegisterResponse{Status: "error", Message: "User exists"}, nil
+		return &ssoapb.RegisterResponse{Status: "error", Message: "Пользователь уже есть"}, nil
 	}
-	return &ssoapb.RegisterResponse{Status: "ok", Message: "User registered"}, nil
+	return &ssoapb.RegisterResponse{Status: "ok", Message: "Пользователь зарегистрирован"}, nil
 }
 
 func (a *AuthServer) Login(ctx context.Context, r *ssoapb.LoginRequest) (*ssoapb.LoginResponse, error) {
@@ -50,7 +50,7 @@ func (a *AuthServer) ChangePassword(ctx context.Context, r *ssoapb.ChangePasswor
 	}
 	newHash, _ := bcrypt.GenerateFromPassword([]byte(r.NewPassword), bcrypt.DefaultCost)
 	if err := a.Store.UpdatePassword(ctx, r.AppId, r.Email, string(newHash)); err != nil {
-		return &ssoapb.ChangePasswordResponse{Status: "error", Message: "fail"}, nil
+		return &ssoapb.ChangePasswordResponse{Status: "error", Message: "ОШИБКА!"}, nil
 	}
-	return &ssoapb.ChangePasswordResponse{Status: "ok", Message: "updated"}, nil
+	return &ssoapb.ChangePasswordResponse{Status: "ok", Message: "Пароль изменен"}, nil
 }
