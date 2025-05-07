@@ -310,10 +310,3 @@ jobs:
               exit 1
             fi
           EOF
-          systemctl daemon-reload
-          if ! systemctl is-enabled --quiet ${{ env.NAME_APP }}; then
-          systemctl enable ${{ env.NAME_APP }}
-          fi
-          systemctl restart ${{ env.NAME_APP }}
-            echo " ✅ ✅  ==== Go-приложение запущено! ====" 
-          EOF
