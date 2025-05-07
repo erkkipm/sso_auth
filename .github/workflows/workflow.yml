@@ -61,14 +61,12 @@ jobs:
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} 'rm -rf ${{ env.ROOT_DIR }}${{ env.NAME_APP }}/build/ || { echo "❌ Не удалось удалить папку build"; cd ${{ env.ROOT_DIR }}${{ env.NAME_APP }}/build/; ls; }'
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} 'mkdir -p ${{ env.ROOT_DIR }}${{ env.NAME_APP }}/build/'
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} 'ls -la ${{ env.ROOT_DIR }}${{ env.NAME_APP }}/build/'
+
       - name: Копирование файлов на удаленный сервер
         run: |
           sudo apt-get install -y ssh rsync
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} 'mkdir -p ${{ env.ROOT_DIR }}${{ env.NAME_APP }}/'
           rsync -avz --exclude='.git' ./ root@${{ env.SERVER_IP }}:${{ env.ROOT_DIR }}${{ env.NAME_APP }}/
-      - name: Go mod tidy
-        run: |
-          ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "cd ${{ env.ROOT_DIR }}${{ env.NAME_APP }} && go mod tidy"
 
       - name: Сборка приложения
         run: |
@@ -109,9 +107,14 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
           export PATH=$PATH:/usr/local/go/bin:$(go env GOPATH)/bin
-      
+          if ! command -v protoc-gen-go >/dev/null 2>&1 || ! command -v protoc-gen-go-grpc >/dev/null 2>&1; then
+            go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.32 && \
+            go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3 && \
+            echo "✅ Плагины успешно установлены." || { echo "❌ Ошибка при установке плагинов."; exit 1; }
+          else
+            echo "✅ Плагины уже установлены."
+          fi
           mkdir -p ${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }} && echo " ✅ Папка для ген-кода создана!" || echo " ❌ Ошибка при создании папки!"
-      
           protoc -I=${{ env.ROOT_DIR }}${{ env.NAME_APP }}/proto \
             --go_out=${{ env.ROOT_DIR }}${{ env.NAME_APP }}${{ env.GEN_DIR }} \
             --go_opt=paths=source_relative \
@@ -119,12 +122,14 @@ jobs:
             --go-grpc_opt=paths=source_relative \
             ${{ env.ROOT_DIR }}${{ env.NAME_APP }}/proto/*.proto && echo "✅ Proto-Код сгенерирован!" || { echo "❌ Proto-Код не сгенерирован!"; exit 1; }
           EOF
+
       - name: Сборка приложения
         run: |
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
           cd /root/apps/sso_auth || { echo "❌ Ошибка при смене директории!"; exit 1; }
           GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o "${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/${{env.NAME_APP}}" "${{ env.ROOT_DIR }}${{env.NAME_APP}}/server/main.go" &&  echo " ✅ ✅ Приложение собрано!" || { echo " ❌ ❌ ОШИБКА в коде Приложения!"; exit 1; }
           EOF
+
       - name: Установка MongoDB
         run: |
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
@@ -141,6 +146,7 @@ jobs:
           echo " ✅ MongoDB уже установлен. Установка не требуется ==== "
           fi
           EOF
+
       - name: Создание Service-файла Mongo DB
         run: |
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
@@ -163,6 +169,7 @@ jobs:
           echo "[Install]" | tee -a "$DB_SERVICE_PATH"
           echo "WantedBy=multi-user.target" | tee -a "$DB_SERVICE_PATH"
           EOF
+
       - name: Создание Service-файла Mongo DB (TEMP)
         run: |
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
@@ -203,8 +210,7 @@ jobs:
           else
           echo " ✅ MongoDB не запущен."
           fi
-          
-          
+
           systemctl disable $DB_SERVICE_TMP_FILE
           if systemctl is-active --quiet $DB_SERVICE_TMP_PATH; then
           echo " ❌ ✅ MongoDB(tmp) активен, останавливаем..."
