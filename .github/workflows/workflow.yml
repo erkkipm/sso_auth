@@ -23,7 +23,7 @@ jobs:
       PATH_SERVICE: /etc/systemd/system/ # Путь к systemd конфигу
       PROTO_DIR: /proto/
       GEN_DIR: /gen/
-      GO_VERSION: 1.23.0
+      GO_VERSION: 1.24.2
 
     steps:
       - name: Проверка репозитория
