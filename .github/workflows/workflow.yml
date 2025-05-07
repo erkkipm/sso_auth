@@ -17,6 +17,7 @@ jobs:
       DB_PORT: 38838
       DB_USER: sso_auth
       DB_PATH: /root/data/db/mongodb/
+      GO_MAIN_FILE: /server/main.go
       ROOT_DIR: /root/apps/
       CONFIG_APP: config_prod.yaml
       PATH_SERVICE: /etc/systemd/system/ # Путь к systemd конфигу
@@ -75,7 +76,7 @@ jobs:
           mkdir -p ${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/
           cd ${{ env.ROOT_DIR }}${{env.NAME_APP}}
           if GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
-          go build -o "${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/${{env.NAME_APP}}" "${{ env.ROOT_DIR }}${{env.NAME_APP}}/app/cmd/main.go"; then
+          go build -o "${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/${{env.NAME_APP}}" "${{ env.ROOT_DIR }}${{env.NAME_APP}}${{env.GO_MAIN_FILE}}"; then 
           echo "✅ ✅ Приложение собрано!"
           else
           echo "❌ ❌ Сборка не удалась — пожалуйста, проверьте наличие go.mod и устраните ошибки." >&2
