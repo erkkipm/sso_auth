@@ -10,7 +10,6 @@ jobs:
     runs-on: ubuntu-22.04
 
     env:
-      GO111MODULE: on
       NAME_APP: sso_auth
       NAME_DB: sso_auth
       SERVER_IP: 85.143.219.160
@@ -28,22 +27,23 @@ jobs:
     steps:
       - name: Проверка репозитория
         uses: actions/checkout@v4
+
       - name: Настройка SSH соединения
         uses: webfactory/ssh-agent@v0.5.3
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
       - name: Проверка и установка Go
         run: |
           ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
           REQUIRED_GO_VERSION="${{ env.GO_VERSION }}"
           INSTALLED_VERSION=$(go version 2>/dev/null | awk '{print $3}' | sed 's/go//') || INSTALLED_VERSION="none"
-          if [ "$INSTALLED_VERSION" != "$REQUIRED_GO_VERSION" ]; then
+          if [ "$(echo $INSTALLED_VERSION | xargs)" != "$(echo $REQUIRED_GO_VERSION | xargs)" ]; then
             echo " ==== Устанавливаем Go $REQUIRED_GO_VERSION ==== "
             curl -fsSL https://go.dev/dl/go${REQUIRED_GO_VERSION}.linux-amd64.tar.gz -o go.tar.gz
             rm -rf /usr/local/go
             tar -C /usr/local -xzf go.tar.gz
             rm go.tar.gz
-        
             echo 'export PATH=$PATH:/usr/local/go/bin' | tee -a /etc/profile
             export PATH=$PATH:/usr/local/go/bin
             echo " ✅ Go $REQUIRED_GO_VERSION установлен!"
@@ -51,8 +51,10 @@ jobs:
           echo " ✅ Go уже версии $REQUIRED_GO_VERSION. Пропускаем установку."
           fi
           EOF
+
       - name: Удаление старых файлов
         run: |
+          ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "chmod -x /etc/update-motd.d/*"
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} 'rm -f ${{ env.PATH_SERVICE }}${{ env.NAME_APP }}.service || { echo "❌ Не удалось удалить systemd файл"; cd ${{ env.PATH_SERVICE }}; ls; }'
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} 'rm -rf ${{ env.ROOT_DIR }}${{ env.NAME_APP }}${{ env.GEN_DIR }} || { echo "❌ Не удалось удалить папку gen"; cd ${{ env.ROOT_DIR }}${{ env.NAME_APP }}${{ env.GEN_DIR }}; ls; }'
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} 'rm -rf ${{ env.ROOT_DIR }}${{ env.NAME_APP }}${{ env.PROTO_DIR }} || { echo "❌ Не удалось удалить папку proto"; cd ${{ env.ROOT_DIR }}${{ env.NAME_APP }}${{ env.PROTO_DIR }}; ls; }'
@@ -64,6 +66,25 @@ jobs:
           sudo apt-get install -y ssh rsync
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} 'mkdir -p ${{ env.ROOT_DIR }}${{ env.NAME_APP }}/'
           rsync -avz --exclude='.git' ./ root@${{ env.SERVER_IP }}:${{ env.ROOT_DIR }}${{ env.NAME_APP }}/
+      - name: Go mod tidy
+        run: |
+          ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} "cd ${{ env.ROOT_DIR }}${{ env.NAME_APP }} && go mod tidy"
+
+      - name: Сборка приложения
+        run: |
+          ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
+          set -euo pipefail
+          mkdir -p ${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/
+          cd ${{ env.ROOT_DIR }}${{env.NAME_APP}}
+          if GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
+          go build -o "${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/${{env.NAME_APP}}" "${{ env.ROOT_DIR }}${{env.NAME_APP}}/app/cmd/main.go"; then
+          echo "✅ ✅ Приложение собрано!"
+          else
+          echo "❌ ❌ Сборка не удалась — пожалуйста, проверьте наличие go.mod и устраните ошибки." >&2
+          exit 1
+          fi
+          EOF
+
       - name: Проверка и установка Proto и плагинов
         run: |
           ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
@@ -255,24 +276,30 @@ jobs:
               touch $SERVICE_APP
               chmod 600 $SERVICE_APP
               chown root:root $SERVICE_APP
-          
               echo "[Unit]" | tee "$SERVICE_APP"
               echo "Description=Go Application" | tee -a "$SERVICE_APP"
-              echo "After=network.target" | tee -a "$SERVICE_APP"
-          
+              echo "After=network.target" | tee -a "$SERVICE_APP"         
               echo "[Service]" | tee -a "$SERVICE_APP"
               echo "ExecStart=${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/${{env.NAME_APP}} --config=${{ env.ROOT_DIR }}${{env.NAME_APP}}/configs/${{env.CONFIG_APP}}" | tee -a "$SERVICE_APP"
               echo "WorkingDirectory=${{ env.ROOT_DIR }}${{env.NAME_APP}}" | tee -a "$SERVICE_APP"
               echo "Restart=always" | tee -a "$SERVICE_APP"
               echo "StandardOutput=inherit" | tee -a "$SERVICE_APP"
               echo "User=root" | tee -a "$SERVICE_APP"
-              echo "Environment=PORT=${{ env.GO_PORT }}" | tee -a "$SERVICE_APP"
-          
-          
+              echo "Environment=PORT=${{ env.GO_PORT }}" | tee -a "$SERVICE_APP"        
               echo "[Install]" | tee -a "$SERVICE_APP"
               echo "WantedBy=multi-user.target" | tee -a "$SERVICE_APP"
             fi
-
+            systemctl daemon-reload 
+            systemctl enable --now ${{ env.NAME_APP }}
+            systemctl status ${{ env.NAME_APP }}
+            if systemctl is-active --quiet fortis; then
+              echo "✅ ✅ Приложение ${{ env.NAME_APP }} успешно запущено и активно."
+              else
+              journalctl -u fortis -n 50
+              echo "❌ ❌ Приложение ${{ env.NAME_APP }} не запустилось." >&2
+              exit 1
+            fi
+          EOF
           systemctl daemon-reload
           if ! systemctl is-enabled --quiet ${{ env.NAME_APP }}; then
           systemctl enable ${{ env.NAME_APP }}
