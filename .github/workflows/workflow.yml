@@ -302,9 +302,9 @@ jobs:
             systemctl daemon-reload 
             systemctl enable --now ${{ env.NAME_APP }}
             systemctl status ${{ env.NAME_APP }}
-            if systemctl is-active --quiet fortis; then
+            if systemctl is-active --quiet ${{ env.NAME_APP }}; then
               echo "✅ ✅ Приложение ${{ env.NAME_APP }} успешно запущено и активно."
-              else
+            else
               journalctl -u fortis -n 50
               echo "❌ ❌ Приложение ${{ env.NAME_APP }} не запустилось." >&2
               exit 1
