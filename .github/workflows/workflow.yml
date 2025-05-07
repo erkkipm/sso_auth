@@ -36,20 +36,23 @@ jobs:
 
       - name: Проверка и установка Go
         run: |
-          ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
+          ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
           REQUIRED_GO_VERSION="${{ env.GO_VERSION }}"
-          INSTALLED_VERSION=$(go version 2>/dev/null | awk '{print $3}' | sed 's/go//') || INSTALLED_VERSION="none"
-          if [ "$(echo $INSTALLED_VERSION | xargs)" != "$(echo $REQUIRED_GO_VERSION | xargs)" ]; then
-            echo " ==== Устанавливаем Go $REQUIRED_GO_VERSION ==== "
-            curl -fsSL https://go.dev/dl/go${REQUIRED_GO_VERSION}.linux-amd64.tar.gz -o go.tar.gz
+          set -euo pipefail
+          
+          CURRENT_GO="$(go version 2>/dev/null || echo 'none')"
+          if [[ "$CURRENT_GO" == *"go$REQUIRED_GO_VERSION"* ]]; then
+            echo "✅ Go $REQUIRED_GO_VERSION уже установлен"
+          else
+            echo "⬇️ Установка Go $REQUIRED_GO_VERSION..."
+            curl -fsSL https://go.dev/dl/go$REQUIRED_GO_VERSION.linux-amd64.tar.gz -o go.tar.gz
             rm -rf /usr/local/go
             tar -C /usr/local -xzf go.tar.gz
+            echo 'export PATH=/usr/local/go/bin:$PATH' >> /etc/profile
+            export PATH=/usr/local/go/bin:$PATH
             rm go.tar.gz
-            echo 'export PATH=$PATH:/usr/local/go/bin' | tee -a /etc/profile
-            export PATH=$PATH:/usr/local/go/bin
             echo " ✅ Go $REQUIRED_GO_VERSION установлен!"
-          else
-          echo " ✅ Go уже версии $REQUIRED_GO_VERSION. Пропускаем установку."
+            go version
           fi
           EOF
 
