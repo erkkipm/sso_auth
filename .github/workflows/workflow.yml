@@ -154,7 +154,7 @@ jobs:
       - name: Создание Service-файла Mongo DB
         run: |
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
-          DB_SERVICE_PATH=${{ env.PATH_SERVICE }}mongobd_${{ env.NAME_APP }}.service
+          DB_SERVICE_PATH=${{ env.PATH_SERVICE }}mongodb_${{ env.NAME_APP }}.service
           if [ -f $DB_SERVICE_PATH ]; then
             rm $DB_SERVICE_PATH
           fi
@@ -177,7 +177,7 @@ jobs:
       - name: Создание Service-файла Mongo DB (TEMP)
         run: |
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
-          DB_SERVICE_PATH=${{ env.PATH_SERVICE }}mongobd_${{ env.NAME_APP }}_tmp.service 
+          DB_SERVICE_PATH=${{ env.PATH_SERVICE }}mongodb_${{ env.NAME_APP }}_tmp.service 
           if [ -f "$DB_SERVICE_PATH" ]; then
             rm $DB_SERVICE_PATH
           fi
@@ -201,10 +201,10 @@ jobs:
         run: |
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
           echo "===== Останавливаем MongoDB . . .  ====== "
-          DB_SERVICE_FILE=mongobd_${{ env.NAME_APP }}.service
-          DB_SERVICE_PATH=${{ env.PATH_SERVICE }}mongobd_${{ env.NAME_APP }}.service
-          DB_SERVICE_TMP_FILE=mongobd_${{ env.NAME_APP }}_tmp.service
-          DB_SERVICE_TMP_PATH=${{ env.PATH_SERVICE }}mongobd_${{ env.NAME_APP }}_tmp.service
+          DB_SERVICE_FILE=mongodb_${{ env.NAME_APP }}.service
+          DB_SERVICE_PATH=${{ env.PATH_SERVICE }}mongodb_${{ env.NAME_APP }}.service
+          DB_SERVICE_TMP_FILE=mongodb_${{ env.NAME_APP }}_tmp.service
+          DB_SERVICE_TMP_PATH=${{ env.PATH_SERVICE }}mongodb_${{ env.NAME_APP }}_tmp.service
           mkdir -p ${{ env.DB_PATH }}${{ env.NAME_DB }}/
           
           systemctl disable $DB_SERVICE_FILE     
@@ -228,8 +228,8 @@ jobs:
       - name: Создаем пользователя с правами на чтение и запись
         run: |
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
-          DB_SERVICE_FILE=${{ env.PATH_SERVICE }}mongobd_${{ env.NAME_APP }}.service
-          DB_SERVICE_TMP_FILE=mongobd_${{ env.NAME_APP }}_tmp.service
+          DB_SERVICE_FILE=${{ env.PATH_SERVICE }}mongodb_${{ env.NAME_APP }}.service
+          DB_SERVICE_TMP_FILE=mongodb_${{ env.NAME_APP }}_tmp.service
           
           pid=$(ss -tunlp | grep ":${{ env.DB_PORT }}" | awk '{print $7}' | cut -d ',' -f 2 | tr -d 'pid=' || echo "")
           
@@ -273,7 +273,7 @@ jobs:
       - name: Запуск MongoDB
         run: |
           ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF' 
-          DB_SERVICE_FILE=mongobd_${{ env.NAME_APP }}.service
+          DB_SERVICE_FILE=mongodb_${{ env.NAME_APP }}.service
           systemctl daemon-reload && sudo systemctl restart $DB_SERVICE_FILE && systemctl enable $DB_SERVICE_FILE && systemctl status $DB_SERVICE_FILE
           EOF
 
