@@ -293,7 +293,6 @@ jobs:
             rm -f "$SERVICE_APP"
           fi
 
-          echo "📦 Создаем новый unit-файл..."
           tee "$SERVICE_APP" > /dev/null <<EOL
           [Unit]
           Description=Go Application
@@ -314,7 +313,6 @@ jobs:
           chmod 600 "$SERVICE_APP"
           chown root:root "$SERVICE_APP"
           
-          echo "🔄 Перезагрузка systemd и запуск сервиса..."
           systemctl daemon-reexec
           systemctl daemon-reload
           systemctl enable --now ${{ env.NAME_APP }}
