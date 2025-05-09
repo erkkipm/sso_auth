@@ -11,7 +11,7 @@ http:
 
 mongodb:
   host: localhost
-  port: "38839"
+  port: "38840"
   username: sso_auth
   password: ErkkiSofit9944
   database: sso_auth

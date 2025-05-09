@@ -14,7 +14,7 @@ jobs:
       NAME_DB: sso_auth
       SERVER_IP: 85.143.219.160
       GO_PORT: 50051
-      DB_PORT: 38839
+      DB_PORT: 38840
       DB_USER: sso_auth
       DB_PATH: /root/data/db/mongodb/
       GO_MAIN_FILE: /server/main.go
