@@ -89,7 +89,7 @@ jobs:
 
       - name: Проверка и установка Proto и плагинов
         run: |
-          ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} bash -s << 'EOF'
           set -euo pipefail
           export PATH=\$PATH:/usr/local/go/bin:\$(go env GOPATH)/bin
           echo "🔄 Обновляем список пакетов…"
