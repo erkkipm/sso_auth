@@ -45,25 +45,23 @@ func GetConfig() *Config {
 func getConfigPath(configPathConst string) string {
 
 	var configPath string
-	var var_config string
-
+	var varConfig string
 	// Проверяем указанный путь к файлу конфигурации через флаг
 	flag.StringVar(&configPath, FlagConfigPathName, "", "Файл конфигурации приложения")
 	flag.Parse()
 	if configPath != "" {
-		var_config = "флаг"
-	}
-
-	// Если путь не указан в флаге, берем из переменной окружения
-	if configPath = os.Getenv(EnvConfigPathName); configPath != "" {
-		var_config = "переменная окружения"
-	}
-
-	// Если не указан флаг — используем путь по умолчанию
-	if configPath == "" {
+		// 1) если передали через флаг
+		varConfig = "флаг"
+	} else if env := os.Getenv(EnvConfigPathName); env != "" {
+		// 2) иначе, если задано через переменную окружения
+		configPath = env
+		varConfig = "переменная окружения"
+	} else {
+		// 3) ни того ни другого — берём путь по умолчанию
 		configPath = configPathConst
-		var_config = "Константа"
+		varConfig = "Константа"
 	}
-	log.Printf("КОНФИГУРАЦИЯ. Путь до файла конфигурации: %s=%s ", var_config, configPath)
+
+	log.Printf("КОНФИГУРАЦИЯ. Источник: %s. Путь до файла: %s", varConfig, configPath)
 	return configPath
 }
