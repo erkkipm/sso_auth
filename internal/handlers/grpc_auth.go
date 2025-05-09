@@ -7,6 +7,7 @@ import (
 	"github.com/erkkipm/sso_auth/internal/storage"
 	"github.com/erkkipm/sso_auth/pkg/jwtutil"
 	"golang.org/x/crypto/bcrypt"
+	"log"
 	"time"
 )
 
@@ -21,6 +22,8 @@ func NewAuthServer(s *storage.Storage, jwtKey string) *AuthServer {
 }
 
 func (a *AuthServer) Register(ctx context.Context, r *ssoapb.RegisterRequest) (*ssoapb.RegisterResponse, error) {
+	log.Printf("Register: входящий запрос: email=%s app_id=%s", r.Email, r.AppId)
+
 	hash, _ := bcrypt.GenerateFromPassword([]byte(r.Password), bcrypt.DefaultCost)
 	user := models.User{
 		AppID:     r.AppId,
@@ -28,10 +31,21 @@ func (a *AuthServer) Register(ctx context.Context, r *ssoapb.RegisterRequest) (*
 		Password:  string(hash),
 		CreatedAt: time.Now(),
 	}
+
 	if err := a.Store.CreateUser(ctx, user); err != nil {
-		return &ssoapb.RegisterResponse{Status: "error", Message: "Пользователь уже есть"}, nil
+		log.Printf("Register: ошибка при создании пользователя: %v", err)
+		return &ssoapb.RegisterResponse{
+			Status:  "error",
+			Message: "Пользователь уже есть",
+		}, err
 	}
-	return &ssoapb.RegisterResponse{Status: "ok", Message: "Пользователь зарегистрирован"}, nil
+
+	log.Printf("Register: пользователь успешно создан: email=%s", r.Email)
+
+	return &ssoapb.RegisterResponse{
+		Status:  "ok",
+		Message: "Пользователь зарегистрирован",
+	}, nil
 }
 
 func (a *AuthServer) Login(ctx context.Context, r *ssoapb.LoginRequest) (*ssoapb.LoginResponse, error) {
