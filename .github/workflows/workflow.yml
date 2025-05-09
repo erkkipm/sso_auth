@@ -90,21 +90,35 @@ jobs:
       - name: Проверка и установка Proto и плагинов
         run: |
           ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
-          apt update -y && apt install -y protobuf-compiler golang-go git curl unzip || { echo "❌ Ошибка установки зависимостей"; exit 1; }
+          set -euo pipefail
           
-          export PATH=$PATH:/usr/local/go/bin:$(go env GOPATH)/bin
+          export PATH=\$PATH:/usr/local/go/bin:\$(go env GOPATH)/bin
           
-          if ! command -v protoc-gen-go >/dev/null 2>&1; then
-            echo " ==== Устанавливаем protoc-gen-go... ==== "
-            go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          echo "🔄 Обновляем список пакетов…"
+          apt-get update
+          
+          if ! command -v protoc >/dev/null; then
+            echo "🔧 Устанавливаем Protoc..."
+            apt-get install -y protobuf-compiler && echo " ✅ Protoc установлен!" || { echo "❌ Ошибка установки Protoc"; exit 1; }
+          else
+            echo "✅ Protoc УЖЕ установлен!"
           fi
           
-          if ! command -v protoc-gen-go-grpc >/dev/null 2>&1; then
-            echo " ==== Устанавливаем protoc-gen-go-grpc... ==== "
-            go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+          if ! command -v protoc-gen-go >/dev/null; then
+            echo "🔧 Устанавливаем protoc-gen-go..."
+            go install google.golang.org/protobuf/cmd/protoc-gen-go@latest && echo " ✅ Плагин Protoc-gen-go установлен!" || { echo "❌ Ошибка установки плагина Protoc-gen-go"; exit 1; }
+          else
+            echo "✅ Плагин Protoc-gen-go-grpc УЖЕ установлен!"
           fi
           
-          echo "✅ Протокол Proto и плагины установлены!"
+          if ! command -v protoc-gen-go-grpc >/dev/null; then
+            echo "🔧 Устанавливаем protoc-gen-go-grpc..."
+            go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest && echo " ✅ Плагин Protoc-gen-go-grpc установлен!" || { echo "❌ Ошибка установки плагина Protoc-gen-go-grpc"; exit 1; }
+          else
+            echo "✅ Плагин Protoc-gen-go-grpc УЖЕ установлен!"
+          fi
+  
+          echo "✅ Все компоненты Proto и плагины установлены!"
           EOF
 
       - name: Генерация Proto-кода
@@ -127,12 +141,6 @@ jobs:
             ${{ env.ROOT_DIR }}${{ env.NAME_APP }}/proto/*.proto && echo "✅ Proto-Код сгенерирован!" || { echo "❌ Proto-Код не сгенерирован!"; exit 1; }
           EOF
 
-      - name: Сборка приложения
-        run: |
-          ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
-          cd /root/apps/sso_auth || { echo "❌ Ошибка при смене директории!"; exit 1; }
-          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o "${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/${{env.NAME_APP}}" "${{ env.ROOT_DIR }}${{env.NAME_APP}}/server/main.go" &&  echo " ✅ ✅ Приложение собрано!" || { echo " ❌ ❌ ОШИБКА в коде Приложения!"; exit 1; }
-          EOF
 
       - name: Установка MongoDB
         run: |
@@ -274,7 +282,7 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF' 
           DB_SERVICE_FILE=mongodb_${{ env.NAME_APP }}.service
-          systemctl daemon-reload && sudo systemctl restart $DB_SERVICE_FILE && systemctl enable $DB_SERVICE_FILE && systemctl status $DB_SERVICE_FILE
+          systemctl daemon-reload && systemctl restart $DB_SERVICE_FILE && systemctl enable $DB_SERVICE_FILE && systemctl status $DB_SERVICE_FILE
           EOF
 
       - name: Создание systemd и запуск GO-приложения
