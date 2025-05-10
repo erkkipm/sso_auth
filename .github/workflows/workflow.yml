@@ -105,7 +105,7 @@ jobs:
             echo "🔧 Устанавливаем protoc-gen-go..."
             go install google.golang.org/protobuf/cmd/protoc-gen-go@latest && echo " ✅ Плагин Protoc-gen-go установлен!" || { echo "❌ Ошибка установки плагина Protoc-gen-go"; exit 1; }
           else
-            echo "✅ Плагин Protoc-gen-go-grpc УЖЕ установлен!"
+            echo "✅ Плагин Protoc-gen-go УЖЕ установлен!"
           fi
           if ! command -v protoc-gen-go-grpc >/dev/null; then
             echo "🔧 Устанавливаем protoc-gen-go-grpc..."
@@ -121,7 +121,7 @@ jobs:
           ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
           set -euo pipefail 
           export PATH=$PATH:/usr/local/go/bin:$(go env GOPATH)/bin
-          mkdir -p ${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }} && echo " ✅ Папка для ген-кода создана!" || echo " ❌ Ошибка при создании папки!"
+          mkdir -p ${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }} && echo "✅ Папка для ген-кода создана!" || echo " ❌ Ошибка при создании папки!"
           protoc -I=${{ env.ROOT_DIR }}${{ env.NAME_APP }}/proto \
             --go_out=${{ env.ROOT_DIR }}${{ env.NAME_APP }}${{ env.GEN_DIR }} \
             --go_opt=paths=source_relative \
@@ -203,20 +203,21 @@ jobs:
           DB_SERVICE_TMP_PATH=${{ env.PATH_SERVICE }}mongodb_${{ env.NAME_APP }}_tmp.service
           mkdir -p ${{ env.DB_PATH }}${{ env.NAME_DB }}/
           
-          systemctl disable $DB_SERVICE_FILE     
-          if systemctl is-active --quiet $DB_SERVICE_PATH; then
-          echo " ❌ ✅ MongoDB активен, останавливаем..."
-          systemctl stop $DB_SERVICE_FILE
+          systemctl disable $DB_SERVICE_FILE
+          
+          if systemctl is-active --quiet $DB_SERVICE_FILE; then
+            echo " ❌ ✅ MongoDB активен, останавливаем..."
+            systemctl stop $DB_SERVICE_FILE
           else
-          echo " ✅ MongoDB не запущен."
+                echo " ✅ MongoDB. $DB_SERVICE_FILE не запущен."
           fi
 
           systemctl disable $DB_SERVICE_TMP_FILE
-          if systemctl is-active --quiet $DB_SERVICE_TMP_PATH; then
-          echo " ❌ ✅ MongoDB(tmp) активен, останавливаем..."
-          systemctl stop $DB_SERVICE_TMP_FILE
+          if systemctl is-active --quiet $DB_SERVICE_TMP_FILE; then
+            echo " ❌ ✅ MongoDB(tmp) активен, останавливаем..."
+            systemctl stop $DB_SERVICE_TMP_FILE
           else
-          echo " ✅ MongoDB(tmp) не запущен"
+            echo " ✅ MongoDB. с не запущен"
           fi
           
           EOF
