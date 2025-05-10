@@ -21,30 +21,47 @@ func NewAuthServer(s *storage.Storage, jwtKey string) *AuthServer {
 	return &AuthServer{Store: s, JWTKey: jwtKey}
 }
 
+// Register ... Регистрация нвоого пользователя
 func (a *AuthServer) Register(ctx context.Context, r *ssoapb.RegisterRequest) (*ssoapb.RegisterResponse, error) {
-	log.Printf("Register: входящий запрос: email=%s app_id=%s", r.Email, r.AppId)
+	log.Printf("Register: входящий запрос: логин=%s телефон=%s Приложение=%s", r.Email, r.Phone, r.AppId)
 
 	hash, _ := bcrypt.GenerateFromPassword([]byte(r.Password), bcrypt.DefaultCost)
 	user := models.User{
 		AppID:     r.AppId,
 		Email:     r.Email,
 		Password:  string(hash),
+		Phone:     r.Phone,
 		CreatedAt: time.Now(),
+	}
+
+	existing, err := a.Store.GetUserByEmailAndApp(ctx, user)
+	if err != nil {
+		log.Printf("Register: ошибка при создании пользователя: %v", err)
+		return &ssoapb.RegisterResponse{
+			Status:  "error",
+			Message: "Ошибка доступа! Сервис недоступен. Попробуйте снова чуток позже",
+		}, err
+	}
+	if existing != nil {
+		return &ssoapb.RegisterResponse{
+			Status:  "error",
+			Message: "Пользователь с таким логином уже есть!",
+		}, nil
 	}
 
 	if err := a.Store.CreateUser(ctx, user); err != nil {
 		log.Printf("Register: ошибка при создании пользователя: %v", err)
 		return &ssoapb.RegisterResponse{
 			Status:  "error",
-			Message: "Пользователь уже есть",
+			Message: "Ошибка при регистрации пользователя! Сервис недоступен. Попробуйте снова чуток позже",
 		}, err
 	}
 
-	log.Printf("Register: пользователь успешно создан: email=%s", r.Email)
+	log.Printf("Register: пользователь %s успешно создан", r.Email)
 
 	return &ssoapb.RegisterResponse{
 		Status:  "ok",
-		Message: "Пользователь зарегистрирован",
+		Message: "Поздравляем! Пользователь зарегистрирован!",
 	}, nil
 }
 

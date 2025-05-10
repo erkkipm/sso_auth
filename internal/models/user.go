@@ -7,5 +7,6 @@ type User struct {
 	AppID     string    `bson:"app_id"`
 	Email     string    `bson:"email"`
 	Password  string    `bson:"password"`
+	Phone     string    `bson:"phone"`
 	CreatedAt time.Time `bson:"created_at"`
 }

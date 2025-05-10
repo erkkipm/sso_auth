@@ -61,10 +61,20 @@ mongo-start:
 .PHONY: mongo-create-user
 mongo-create-user:
 	@echo "======= Создание пользователя MongoDB ========"
-	@mongosh --port $(DB_PORT) --eval 'db.getSiblingDB("admin").createUser({user: "$(DB_USER)", pwd: "$(DB_PASS)", roles: [{role: "readWrite", db: "$(NAME_DB)"}]})' && echo "✅ ✅ Пользователь $(DB_USER) создан в admin" || echo "✅  Возможно, пользователь уже существует."
-	@mongosh --port $(DB_PORT) --eval 'db.getSiblingDB("$(NAME_DB)").createUser({user: "$(DB_USER)", pwd: "$(DB_PASS)", roles: [{role: "readWrite", db: "$(NAME_DB)"}]})' && echo "✅ ✅ Пользователь $(DB_USER) создан в $(NAME_DB)" || echo "✅️  Возможно, пользователь уже существует."
-	@mongosh admin --port $(DB_PORT) --eval 'db.getUser("$(DB_USER)")'
-	@mongosh $(NAME_DB) --port $(DB_PORT) --eval 'db.getUser("$(DB_USER)")'
+	@mongosh --port $(DB_PORT) --eval 'db.getSiblingDB("admin").createUser({user: "$(DB_USER)", pwd: "$(DB_PASS)", roles: [{role: "readWrite", db: "$(NAME_DB)"}]})' \
+	&& echo "✅ Пользователь $(DB_USER) создан в admin" \
+	|| echo "✅ Возможно, пользователь уже существует в admin."
+	@mongosh --port $(DB_PORT) --eval 'db.getSiblingDB("$(NAME_DB)").createUser({user: "$(DB_USER)", pwd: "$(DB_PASS)", roles: [{role: "readWrite", db: "$(NAME_DB)"}]})' \
+	&& echo "✅ Пользователь $(DB_USER) создан в базе $(NAME_DB)" \
+	|| echo "✅ Возможно, пользователь уже существует в $(NAME_DB)."
+
+	@echo "======= Проверка пользователя в admin ========"
+	@mongosh admin --port $(DB_PORT) --eval 'u = db.getUser("$(DB_USER)"); if (u) { printjson(u) } else { print("❌ Пользователь не найден в admin") }' \
+	|| echo "⚠️ Не удалось подключиться к MongoDB admin"
+
+	@echo "======= Проверка пользователя в базе $(NAME_DB) ========"
+	@mongosh $(NAME_DB) --port $(DB_PORT) --eval 'u = db.getUser("$(DB_USER)"); if (u) { printjson(u) } else { print("❌ Пользователь не найден в $(NAME_DB)") }' \
+	|| echo "⚠️ Не удалось подключиться к MongoDB $(NAME_DB)"
 
 .PHONY: gen
 gen:
