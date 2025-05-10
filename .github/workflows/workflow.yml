@@ -90,8 +90,9 @@ jobs:
       - name: Проверка и установка Proto и плагинов
         run: |
           ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
-          export PATH=$PATH:/usr/local/go/bin:$(go env GOPATH)/bin
           set -euo pipefail
+          export PATH=$PATH:/usr/local/go/bin:$(go env GOPATH)/bin
+
           echo "🔄 Обновляем список пакетов…"
           apt-get update
           if ! command -v protoc >/dev/null; then
@@ -119,6 +120,7 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
           set -euo pipefail 
+          export PATH=$PATH:/usr/local/go/bin:$(go env GOPATH)/bin
           mkdir -p ${{ env.ROOT_DIR }}${{env.NAME_APP}}${{ env.GEN_DIR }} && echo " ✅ Папка для ген-кода создана!" || echo " ❌ Ошибка при создании папки!"
           protoc -I=${{ env.ROOT_DIR }}${{ env.NAME_APP }}/proto \
             --go_out=${{ env.ROOT_DIR }}${{ env.NAME_APP }}${{ env.GEN_DIR }} \
