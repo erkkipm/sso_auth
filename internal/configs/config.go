@@ -1,8 +1,8 @@
 package configs
 
 type Config struct {
-	//Env                      string   `yaml:"env" env:"ENV" env-default:"local"`
-	//NameProject              string   `yaml:"name_project" env:"NAME_PROJECT" env-required:"true"`
+	Env         string `yaml:"env" env:"ENV" env-default:"local"`
+	NameProject string `yaml:"name_project" env:"NAME_PROJECT" env-required:"true"`
 	//MaxConcurrentConnections int64    `yaml:"max_concurrent_connections" env:"MAX_CONCURRENT_CONNECTIONS" env-default:"10"`
 	//Email                    string   `yaml:"email" env:"EMAIL" env-default:"erkkipm@er-company.eu"`
 	//Host                     string   `yaml:"host" env:"HTTP-HOST" env-default:"localhost"`

@@ -1,6 +1,6 @@
 env:  "prod" # dev, test, prod, local
-#name_project: "sso_auth"
-#max_concurrent_connections: 5
+name_project: "sso_auth"
+# max_concurrent_connections: 5
 #host: "localhost"
 jwt_key: ErkkiSofit9944
 http:

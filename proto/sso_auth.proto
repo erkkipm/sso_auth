@@ -11,8 +11,9 @@ service AuthService {
 
 message RegisterRequest {
   string email = 1;
-  string password = 2;
-  string app_id = 3;
+  string phone = 2;
+  string password = 3;
+  string app_id = 4;
 }
 
 message RegisterResponse {
