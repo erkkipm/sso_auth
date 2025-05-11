@@ -53,8 +53,8 @@ func (a *AuthServer) Register(ctx context.Context, r *ssoapb.RegisterRequest) (*
 		log.Printf("Register: ошибка при создании пользователя: %v", err)
 		return &ssoapb.RegisterResponse{
 			Status:  "error",
-			Message: "Ошибка при регистрации пользователя! Сервис недоступен. Попробуйте снова чуток позже",
-		}, err
+			Message: "Ошибка подключения к базе: " + err.Error(),
+		}, nil
 	}
 
 	log.Printf("Register: пользователь %s успешно создан", r.Email)

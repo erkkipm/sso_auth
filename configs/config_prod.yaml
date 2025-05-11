@@ -10,7 +10,7 @@ http:
 #  write-timeout: "400s"
 
 mongodb:
-  host: localhost
+  host: 127.0.0.1
   port: "38840"
   username: sso_auth
   password: ErkkiSofit9944
