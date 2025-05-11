@@ -19,7 +19,7 @@ import (
 func main() {
 
 	// КОНТЕКСТ. Создание контекста с обработкой сигналов завершения
-	_, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	// КОНФИГУРАЦИЯ. Инициализация
@@ -40,7 +40,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	store, err := storage.NewStorage("mongodb://localhost:"+cfg.MongoDB.Port, cfg.MongoDB.Username, cfg.MongoDB.Collection.Users)
+	store, err := storage.NewStorage(ctx, cfg.MongoDB)
 	if err != nil {
 		log.Error("Mongo ошибка:", sl.Err(err))
 		os.Exit(1)

@@ -3,6 +3,8 @@ package storage
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/erkkipm/sso_auth/internal/configs"
 	"github.com/erkkipm/sso_auth/internal/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -13,12 +15,22 @@ type Storage struct {
 	Collection *mongo.Collection
 }
 
-func NewStorage(uri, db, coll string) (*Storage, error) {
-	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(uri))
+func NewStorage(ctx context.Context, cfg configs.MongoDB) (*Storage, error) {
+
+	mongoURI := fmt.Sprintf(
+		"mongodb://%s:%s@%s:%s/%s?authSource=%s",
+		cfg.Username,
+		cfg.Password,
+		cfg.Host,
+		cfg.Port,
+		cfg.Database,
+		cfg.AuthDB,
+	)
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
 	if err != nil {
 		return nil, err
 	}
-	return &Storage{Collection: client.Database(db).Collection(coll)}, nil
+	return &Storage{Collection: client.Database(cfg.Database).Collection(cfg.Collection.Users)}, nil
 }
 
 // CreateUser ... Запись пользователя в Базу

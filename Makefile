@@ -78,14 +78,14 @@ mongo-create-user:
 
 .PHONY: gen
 gen:
-	echo "======= Генерация кода ========"
-	mkdir -p $(GEN_DIR)
-	protoc --go_out=$(GEN_DIR) --go_opt=paths=source_relative \
+	@echo "======= Генерация кода ========"
+	@mkdir -p $(GEN_DIR)
+	@protoc --go_out=$(GEN_DIR) --go_opt=paths=source_relative \
 	       --go-grpc_out=$(GEN_DIR) --go-grpc_opt=paths=source_relative \
 	       $(PROTO_DIR)*.proto && echo " ✅  Код сгенерирован!" || echo " ❌  Код не сгенерирован!"
 
 .PHONY: run
 run:
-	echo "======= Запуск приложения ========"
-	go run $(APP_MAIN_GO) --config=$(CONFIG_APP) && echo " ✅  Приложение запущено!" || echo " ❌  Приложение не запущено!"
+	@echo "======= Запуск приложения ========"
+	@go run $(APP_MAIN_GO) --config=$(CONFIG_APP) && echo " ✅  Приложение запущено!" || echo " ❌  Приложение не запущено!"
 
