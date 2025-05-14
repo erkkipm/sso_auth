@@ -3,15 +3,16 @@ name_project: "sso_auth"
 # max_concurrent_connections: 5
 #host: "localhost"
 jwt_key: ErkkiSofit9944
-http:
+token_ttl: 3600
+grpc:
 #  ip: 85.143.219.160
   port: "50051"
-#  read-timeout: "400s"
-#  write-timeout: "400s"
+  read-timeout: "400s"
+  write-timeout: "400s"
 
 mongodb:
   host: 127.0.0.1
-  port: "38840"
+  port: "38841"
   username: sso_auth
   password: ErkkiSofit9944
   database: sso_auth

@@ -1,28 +1,21 @@
 # Переменные окружения
-NAME_APP = sso_auth
+#NAME_APP = sso_auth
 APP_MAIN_GO = ./server/main.go
-CONFIG_APP = ./configs/config_prod.yaml
-NAME_DB = sso_auth
-DB_USER = sso_auth
-DB_PASS = ErkkiSofit9944
-DB_PORT = 38840
+#CONFIG_APP = ./configs/config_prod.yaml
+#NAME_DB = sso_auth
+#DB_USER = sso_auth
+#DB_PASS = ErkkiSofit9944
+DB_PORT = 38841
 DB_PATH = /Users/erkkipuolakainen/data/db/
-GEN_DIR = ./gen/
-PROTO_DIR = ./proto/
+#GEN_DIR = ./gen/
+#PROTO_DIR = ./proto/
 
 
 # Установка зависимостей, сборка, запуск Mongo и создание пользователя
 .PHONY: all
-all: stop-mongo tidy clean build mongo-start mongo-create-user gen run
-
-# Остановка MongoDB
-.PHONY: stop-mongo
-stop-mongo:
-	@echo "======= Остановка MongoDB... ========"
-	@brew services stop mongodb/brew/mongodb-community && echo " ✅  MongoDB остановлен" || echo " ❌  MongoDB не найден."
-	@sudo mongosh --port $(DB_PORT) --eval "db.shutdownServer()" && \
-		echo " ❌  MongoDB на порту $(DB_PORT) пришлось остановить принудительно!" || \
-		echo " ✅  MongoDB не запущен!"
+all: tidy mongo-start run
+#all: mongo-stop clean build mongo-start mongo-create-user run
+#all: mongo-stop tidy clean build mongo-start mongo-create-user gen run
 
 # Установка зависимостей
 .PHONY: tidy
@@ -31,17 +24,26 @@ tidy:
 	@go mod tidy && echo " ✅  Зависимости установлены!" || echo " ❌  Зависимости не установлены!"
 
 # Очистка
-.PHONY: clean
-clean:
-	@echo "======= Удаление старых файлов ========"
-	@rm -rf ./build/ && echo " ✅  Старые файлы удалены!"
+#.PHONY: clean
+#clean:
+#	@echo "======= Удаление старых файлов ========"
+#	@rm -rf ./build/ && echo " ✅  Старые файлы удалены!"
 
 # Сборка
-.PHONY: build
-build:
-	@echo "======= Сборка приложения ========"
-	@mkdir -p ./build/
-	@go build -o ./build/sso_auth ./server/main.go && echo " ✅  Сборка успешна!" || echo " ❌  Ошибка сборки!"
+#.PHONY: build
+#build:
+#	@echo "======= Сборка приложения ========"
+#	@mkdir -p ./build/
+#	@go build -o ./build/sso_auth ./server/main.go && echo " ✅  Сборка успешна!" || echo " ❌  Ошибка сборки!"
+
+# Остановка MongoDB
+#.PHONY: mongo-stop
+#mongo-stop:
+#	@echo "======= Остановка MongoDB... ========"
+#	@brew services stop mongodb/brew/mongodb-community && echo " ✅  MongoDB остановлен" || echo " ❌  MongoDB не найден."
+#	@sudo mongosh --port $(DB_PORT) --eval "db.shutdownServer()" && \
+#		echo " ❌  MongoDB на порту $(DB_PORT) пришлось остановить принудительно!" || \
+#		echo " ✅  MongoDB не запущен!"
 
 # Запуск MongoDB
 .PHONY: mongo-start
@@ -58,34 +60,34 @@ mongo-start:
 	fi
 
 # Создание пользователя MongoDB
-.PHONY: mongo-create-user
-mongo-create-user:
-	@echo "======= Создание пользователя MongoDB ========"
-	@mongosh --port $(DB_PORT) --eval 'db.getSiblingDB("admin").createUser({user: "$(DB_USER)", pwd: "$(DB_PASS)", roles: [{role: "readWrite", db: "$(NAME_DB)"}]})' \
-	&& echo "✅ Пользователь $(DB_USER) создан в admin" \
-	|| echo "✅ Возможно, пользователь уже существует в admin."
-	@mongosh --port $(DB_PORT) --eval 'db.getSiblingDB("$(NAME_DB)").createUser({user: "$(DB_USER)", pwd: "$(DB_PASS)", roles: [{role: "readWrite", db: "$(NAME_DB)"}]})' \
-	&& echo "✅ Пользователь $(DB_USER) создан в базе $(NAME_DB)" \
-	|| echo "✅ Возможно, пользователь уже существует в $(NAME_DB)."
+#.PHONY: mongo-create-user
+#mongo-create-user:
+#	@echo "======= Создание пользователя MongoDB ========"
+#	@mongosh --port $(DB_PORT) --eval 'db.getSiblingDB("admin").createUser({user: "$(DB_USER)", pwd: "$(DB_PASS)", roles: [{role: "readWrite", db: "$(NAME_DB)"}]})' \
+#	&& echo "✅ Пользователь $(DB_USER) создан в admin" \
+#	|| echo "✅ Возможно, пользователь уже существует в admin."
+#	@mongosh --port $(DB_PORT) --eval 'db.getSiblingDB("$(NAME_DB)").createUser({user: "$(DB_USER)", pwd: "$(DB_PASS)", roles: [{role: "readWrite", db: "$(NAME_DB)"}]})' \
+#	&& echo "✅ Пользователь $(DB_USER) создан в базе $(NAME_DB)" \
+#	|| echo "✅ Возможно, пользователь уже существует в $(NAME_DB)."
+#
+#	@echo "======= Проверка пользователя в admin ========"
+#	@mongosh admin --port $(DB_PORT) --eval 'u = db.getUser("$(DB_USER)"); if (u) { printjson(u) } else { print("❌ Пользователь не найден в admin") }' \
+#	|| echo "⚠️ Не удалось подключиться к MongoDB admin"
+#
+#	@echo "======= Проверка пользователя в базе $(NAME_DB) ========"
+#	@mongosh $(NAME_DB) --port $(DB_PORT) --eval 'u = db.getUser("$(DB_USER)"); if (u) { printjson(u) } else { print("❌ Пользователь не найден в $(NAME_DB)") }' \
+#	|| echo "⚠️ Не удалось подключиться к MongoDB $(NAME_DB)"
 
-	@echo "======= Проверка пользователя в admin ========"
-	@mongosh admin --port $(DB_PORT) --eval 'u = db.getUser("$(DB_USER)"); if (u) { printjson(u) } else { print("❌ Пользователь не найден в admin") }' \
-	|| echo "⚠️ Не удалось подключиться к MongoDB admin"
-
-	@echo "======= Проверка пользователя в базе $(NAME_DB) ========"
-	@mongosh $(NAME_DB) --port $(DB_PORT) --eval 'u = db.getUser("$(DB_USER)"); if (u) { printjson(u) } else { print("❌ Пользователь не найден в $(NAME_DB)") }' \
-	|| echo "⚠️ Не удалось подключиться к MongoDB $(NAME_DB)"
-
-.PHONY: gen
-gen:
-	@echo "======= Генерация кода ========"
-	@mkdir -p $(GEN_DIR)
-	@protoc --go_out=$(GEN_DIR) --go_opt=paths=source_relative \
-	       --go-grpc_out=$(GEN_DIR) --go-grpc_opt=paths=source_relative \
-	       $(PROTO_DIR)*.proto && echo " ✅  Код сгенерирован!" || echo " ❌  Код не сгенерирован!"
+#.PHONY: gen
+#gen:
+#	@echo "======= Генерация кода ========"
+#	@mkdir -p $(GEN_DIR)
+#	@protoc --go_out=$(GEN_DIR) --go_opt=paths=source_relative \
+#	       --go-grpc_out=$(GEN_DIR) --go-grpc_opt=paths=source_relative \
+#	       $(PROTO_DIR)*.proto && echo " ✅  Код сгенерирован!" || echo " ❌  Код не сгенерирован!"
 
 .PHONY: run
 run:
 	@echo "======= Запуск приложения ========"
-	@go run $(APP_MAIN_GO) --config=$(CONFIG_APP) && echo " ✅  Приложение запущено!" || echo " ❌  Приложение не запущено!"
+	@go run $(APP_MAIN_GO)  && echo " ✅  Приложение запущено!" || echo " ❌  Приложение не запущено!"
 

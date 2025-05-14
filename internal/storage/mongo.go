@@ -15,8 +15,15 @@ type Storage struct {
 	Collection *mongo.Collection
 }
 
+// NewStorage ... Инициализация БД (Подключение)
 func NewStorage(ctx context.Context, cfg configs.MongoDB) (*Storage, error) {
+	// URL без авторизации
+	//mongoURI := fmt.Sprintf(
+	//	"mongodb://localhost:%s",
+	//	cfg.Port,
+	//)
 
+	// URL с авторизацией
 	mongoURI := fmt.Sprintf(
 		"mongodb://%s:%s@%s:%s/%s?authSource=%s",
 		cfg.Username,
@@ -26,7 +33,10 @@ func NewStorage(ctx context.Context, cfg configs.MongoDB) (*Storage, error) {
 		cfg.Database,
 		cfg.AuthDB,
 	)
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
+
+	clientOpt := options.Client().ApplyURI(mongoURI)
+
+	client, err := mongo.Connect(ctx, clientOpt)
 	if err != nil {
 		return nil, err
 	}

@@ -2,18 +2,19 @@ package main
 
 import (
 	"context"
-	ssoapb "github.com/erkkipm/sso_auth/gen/proto"
 	"github.com/erkkipm/sso_auth/internal/configs"
 	"github.com/erkkipm/sso_auth/internal/handlers"
 	"github.com/erkkipm/sso_auth/internal/logger"
 	"github.com/erkkipm/sso_auth/internal/storage"
 	"github.com/erkkipm/sso_auth/pkg/logger/sl"
+	ssov1 "github.com/erkkipm/sso_proto/gen/go"
 	"google.golang.org/grpc"
 	"log/slog"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -34,27 +35,35 @@ func main() {
 	// СОЗДАНИЕ ПРИЛОЖЕНИЯ
 	log.Info("ПРИЛОЖЕНИЕ. Инициализация...", slog.String("env", cfg.Env))
 
-	lis, err := net.Listen("tcp", ":"+cfg.HTTP.Port)
-	if err != nil {
-		log.Error("Ошибка порта:", sl.Err(err))
-		os.Exit(1)
-	}
+	// ПОДКЛЮЧЕНИЕ БД
+	ctxMng, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
 
-	store, err := storage.NewStorage(ctx, cfg.MongoDB)
+	store, err := storage.NewStorage(ctxMng, cfg.MongoDB)
 	if err != nil {
-		log.Error("Mongo ошибка:", sl.Err(err))
+		log.Error("БД. Ошибка подключения к MongoDB:", sl.Err(err))
 		os.Exit(1)
 	} else {
-		log.Info("MongoDB. Успешно!", slog.String("mongodb://localhost:", cfg.MongoDB.Port+"/"+cfg.MongoDB.Username+"/"+cfg.MongoDB.Collection.Users))
+		log.Info("БД. Успешно подключена!", slog.String("mongodb://localhost:", cfg.MongoDB.Port+"/"+cfg.MongoDB.Username+"/"+cfg.MongoDB.Collection.Users))
 	}
 
-	s := grpc.NewServer()
-	ssoapb.RegisterAuthServiceServer(s, handlers.NewAuthServer(store, cfg.JWTKey))
+	// Создаем TCP-листенер на порту 50055 для gRPC
+	lis, err := net.Listen("tcp", ":"+cfg.GRPC.Port)
+	if err != nil {
+		log.Error("Ошибка подключения порта:", sl.Err(err))
+		os.Exit(1)
+	}
+	// Создаем gRPC-сервер
+	gRPCServer := grpc.NewServer()
 
-	log.Info("SSO_AUTH ПРИЛОЖЕНИЕ: Запущено!", slog.String("порт", cfg.HTTP.Port))
-
-	if err := s.Serve(lis); err != nil {
+	// Регистрируем наш сервис Users на gRPC-сервере
+	ssov1.RegisterAuthServer(gRPCServer, handlers.NewServerAPI(store, cfg.JWTKey))
+	log.Info("ПРИЛОЖЕНИЕ: Запущено!", slog.String("порт", cfg.GRPC.Port))
+	// Запускаем сервер (блокирующий вызов)
+	if err := gRPCServer.Serve(lis); err != nil {
 		log.Error("ОШИБКА ПРИЛОЖЕНИЯ:", sl.Err(err))
 		os.Exit(1)
 	}
+	// =========================================================================
+
 }
