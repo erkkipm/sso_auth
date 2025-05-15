@@ -87,8 +87,6 @@ jobs:
           fi
           EOF
 
-
-
       - name: Установка MongoDB
         run: |
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
