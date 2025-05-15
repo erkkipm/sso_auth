@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"github.com/erkkipm/sso_auth/internal/storage"
 	ssov1 "github.com/erkkipm/sso_proto/gen/go"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -15,7 +16,7 @@ type Auth interface {
 		ctx context.Context,
 		email string,
 		password string,
-		appID int,
+		appID string,
 	) (token string, err error)
 	Register(
 		ctx context.Context,
@@ -72,19 +73,17 @@ func (s *serverAPI) Login(
 		return nil, status.Error(codes.InvalidArgument, "password is required")
 	}
 
-	if in.GetAppId() == 0 {
+	if in.GetAppId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "app_id is required")
 	}
 
-	token, err := s.auth.Login(ctx, in.GetEmail(), in.GetPassword(), int(in.GetAppId()))
+	token, err := s.auth.Login(ctx, in.GetEmail(), in.GetPassword(), in.GetAppId())
 	if err != nil {
 		// Ошибку auth.ErrInvalidCredentials мы создадим ниже
-		if errors.Is(err, auth.ErrInvalidCredentials) {
+		if errors.Is(err, storage.ErrInvalidCredentials) {
 			return nil, status.Error(codes.InvalidArgument, "invalid email or password")
 		}
-
 		return nil, status.Error(codes.Internal, "failed to login")
 	}
-
 	return &ssov1.LoginResponse{Token: token}, nil
 }

@@ -67,7 +67,7 @@ func (s *ServerAPI) Register(ctx context.Context, r *ssov1.RegisterRequest) (*ss
 
 	return &ssov1.RegisterResponse{
 		Success: true,
-		Message: "Поздравляем! Пользователь зарегистрирован!",
+		Message: "Поздравляем! Вы зарегистрированы! В ближайшее время на e-mail придет письмо для подтверждения аккаунта",
 	}, nil
 }
 
@@ -81,8 +81,8 @@ func (s *ServerAPI) Login(ctx context.Context, r *ssov1.LoginRequest) (*ssov1.Lo
 	return &ssov1.LoginResponse{Token: token}, nil
 }
 
-// ChangePassword ...
-//func (s *ServerAPI) ChangePassword(ctx context.Context, r *ssov1.) (*ssov1.ChangePasswordResponse, error) {
+//// ChangePassword ...
+//func (s *ServerAPI) ChangePassword(ctx context.Context, r *ssov1.) (*ssov1., error) {
 //	user, err := s.Store.FindUser(ctx, r.AppId, r.Email)
 //	if err != nil || bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(r.OldPassword)) != nil {
 //		return &ssov1.ChangePasswordResponse{Status: "error", Message: "invalid"}, nil
