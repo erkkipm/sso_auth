@@ -5,7 +5,7 @@ import (
 	"github.com/erkkipm/sso_auth/internal/models"
 	"github.com/erkkipm/sso_auth/internal/storage"
 	"github.com/erkkipm/sso_auth/pkg/jwtutil"
-	ssov1 "github.com/erkkipm/sso_proto/gen/go"
+	ssoV1 "github.com/erkkipm/sso_proto/gen/go"
 	"golang.org/x/crypto/bcrypt"
 	"log"
 	"time"
@@ -13,7 +13,7 @@ import (
 
 // ServerAPI ... реализует интерфейс pb.AuthServer
 type ServerAPI struct {
-	ssov1.UnimplementedAuthServer
+	ssoV1.UnimplementedAuthServer
 	Store  *storage.Storage
 	JWTKey string
 }
@@ -27,7 +27,7 @@ func NewServerAPI(s *storage.Storage, jwtKey string) *ServerAPI {
 }
 
 // Register ... Регистрация нвоого пользователя
-func (s *ServerAPI) Register(ctx context.Context, r *ssov1.RegisterRequest) (*ssov1.RegisterResponse, error) {
+func (s *ServerAPI) Register(ctx context.Context, r *ssoV1.RegisterRequest) (*ssoV1.RegisterResponse, error) {
 	log.Printf("Register: входящий запрос: логин=%s телефон=%s Приложение=%s", r.Email, r.Phone, r.AppId)
 
 	hash, _ := bcrypt.GenerateFromPassword([]byte(r.Password), bcrypt.DefaultCost)
@@ -42,14 +42,14 @@ func (s *ServerAPI) Register(ctx context.Context, r *ssov1.RegisterRequest) (*ss
 	existing, err := s.Store.GetUserByEmailAndApp(ctx, user)
 	if err != nil {
 		log.Printf("Register: ошибка при обращении к базе: %v", err)
-		return &ssov1.RegisterResponse{
+		return &ssoV1.RegisterResponse{
 			Success: false,
 			Message: "Ошибка доступа! Сервис недоступен. Попробуйте снова чуток позже",
 		}, err
 	}
 	if existing != nil {
 		log.Printf("Register: ошибка при проверки пользователя на уникальноссть: %v", err)
-		return &ssov1.RegisterResponse{
+		return &ssoV1.RegisterResponse{
 			Success: false,
 			Message: "Пользователь с таким логином уже есть!",
 		}, nil
@@ -57,7 +57,7 @@ func (s *ServerAPI) Register(ctx context.Context, r *ssov1.RegisterRequest) (*ss
 
 	if err := s.Store.CreateUser(ctx, user); err != nil {
 		log.Printf("Register: ошибка при создании пользователя: %v", err)
-		return &ssov1.RegisterResponse{
+		return &ssoV1.RegisterResponse{
 			Success: false,
 			Message: "Ошибка подключения к базе: " + err.Error(),
 		}, nil
@@ -65,20 +65,20 @@ func (s *ServerAPI) Register(ctx context.Context, r *ssov1.RegisterRequest) (*ss
 
 	log.Printf("Register: пользователь %s успешно создан", r.Email)
 
-	return &ssov1.RegisterResponse{
+	return &ssoV1.RegisterResponse{
 		Success: true,
 		Message: "Поздравляем! Вы зарегистрированы! В ближайшее время на e-mail придет письмо для подтверждения аккаунта",
 	}, nil
 }
 
 // Login ...
-func (s *ServerAPI) Login(ctx context.Context, r *ssov1.LoginRequest) (*ssov1.LoginResponse, error) {
+func (s *ServerAPI) Login(ctx context.Context, r *ssoV1.LoginRequest) (*ssoV1.LoginResponse, error) {
 	user, err := s.Store.FindUser(ctx, r.AppId, r.Email)
 	if err != nil || bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(r.Password)) != nil {
 		return nil, err
 	}
 	token, _ := jwtutil.GenerateToken(user.Email, s.JWTKey, 72*time.Hour)
-	return &ssov1.LoginResponse{Token: token}, nil
+	return &ssoV1.LoginResponse{Token: token}, nil
 }
 
 //// ChangePassword ...
