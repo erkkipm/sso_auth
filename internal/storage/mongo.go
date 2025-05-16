@@ -38,8 +38,14 @@ func NewStorage(ctx context.Context, cfg configs.MongoDB) (*Storage, error) {
 
 	client, err := mongo.Connect(ctx, clientOpt)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ошибка подключения к MongoDB: %w", err)
 	}
+
+	// Проверка соединения с Mongo
+	if err = client.Ping(ctx, nil); err != nil {
+		return nil, fmt.Errorf("MongoDB не отвечает: %w", err)
+	}
+
 	return &Storage{Collection: client.Database(cfg.Database).Collection(cfg.Collection.Users)}, nil
 }
 
