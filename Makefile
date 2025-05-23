@@ -1,5 +1,5 @@
 # Переменные окружения
-#NAME_APP = sso_auth
+NAME_APP = sso_auth
 APP_MAIN_GO = ./server/main.go
 #CONFIG_APP = ./configs/config_prod.yaml
 #NAME_DB = sso_auth
@@ -53,7 +53,13 @@ mongo-start:
 		echo "✅  MongoDB уже запущен на порту $(DB_PORT)."; \
 	else \
 		echo "✅  MongoDB не запущен. Пытаемся стартовать..."; \
-		sudo mongod --dbpath=$(DB_PATH) --port=$(DB_PORT) --fork --logpath=$(DB_PATH)/mongod.log --unixSocketPrefix=/tmp || echo "❌ Не удалось запустить MongoDB"; \
+		sudo mongod \
+			--dbpath=$(DB_PATH) \
+			--port=$(DB_PORT) \
+			--logpath=$(DB_PATH)/mongod.log \
+			--logappend \
+			--fork \
+			--bind_ip 127.0.0.1 || echo "❌ Не удалось запустить MongoDB"; \
 		sleep 2; \
 		if nc -z 127.0.0.1 $(DB_PORT); then echo "✅  MongoDB успешно запущен."; \
 		else echo "❌  MongoDB не слушает порт. Последние строки лога:"; tail -n 20 $(DB_PATH)/mongod.log; false; fi; \
@@ -78,13 +84,6 @@ mongo-start:
 #	@mongosh $(NAME_DB) --port $(DB_PORT) --eval 'u = db.getUser("$(DB_USER)"); if (u) { printjson(u) } else { print("❌ Пользователь не найден в $(NAME_DB)") }' \
 #	|| echo "⚠️ Не удалось подключиться к MongoDB $(NAME_DB)"
 
-#.PHONY: gen
-#gen:
-#	@echo "======= Генерация кода ========"
-#	@mkdir -p $(GEN_DIR)
-#	@protoc --go_out=$(GEN_DIR) --go_opt=paths=source_relative \
-#	       --go-grpc_out=$(GEN_DIR) --go-grpc_opt=paths=source_relative \
-#	       $(PROTO_DIR)*.proto && echo " ✅  Код сгенерирован!" || echo " ❌  Код не сгенерирован!"
 
 .PHONY: run
 run:

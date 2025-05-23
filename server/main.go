@@ -47,7 +47,7 @@ func main() {
 		log.Info("БД. Успешно подключена!", slog.String("mongodb://localhost:", cfg.MongoDB.Port+"/"+cfg.MongoDB.Username+"/"+cfg.MongoDB.Collection.Users))
 	}
 
-	// Создаем TCP-листенер на порту 50055 для gRPC
+	// Создаем TCP-листенер для gRPC
 	lis, err := net.Listen("tcp", ":"+cfg.GRPC.Port)
 	if err != nil {
 		log.Error("Ошибка подключения порта:", sl.Err(err))

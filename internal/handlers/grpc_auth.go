@@ -7,6 +7,8 @@ import (
 	"github.com/erkkipm/sso_auth/pkg/jwtutil"
 	ssoV1 "github.com/erkkipm/sso_proto/gen/go"
 	"golang.org/x/crypto/bcrypt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"log"
 	"time"
 )
@@ -74,10 +76,25 @@ func (s *ServerAPI) Register(ctx context.Context, r *ssoV1.RegisterRequest) (*ss
 // Login ...
 func (s *ServerAPI) Login(ctx context.Context, r *ssoV1.LoginRequest) (*ssoV1.LoginResponse, error) {
 	user, err := s.Store.FindUser(ctx, r.AppId, r.Email)
-	if err != nil || bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(r.Password)) != nil {
-		return nil, err
+	log.Printf("Login: user", user)
+	log.Printf("Login: входящий запрос: логин=%s Приложение=%s. ID=%s", r.Email, r.AppId, user.ID.Hex())
+	if err != nil {
+		log.Printf("Login: пользователь не найден: %v", err)
+		return nil, status.Error(codes.NotFound, "Пользователь с таким email не найден")
 	}
-	token, _ := jwtutil.GenerateToken(user.Email, s.JWTKey, 72*time.Hour)
+	if user == nil {
+		log.Printf("Login: пользователь не найден (nil)")
+		return nil, status.Error(codes.NotFound, "Пользователь с таким email не найден")
+	}
+	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(r.Password)) != nil {
+		log.Printf("Login: неверный пароль для %s.", r.Email)
+		return nil, status.Error(codes.Unauthenticated, "Неверный пароль")
+	}
+	token, err := jwtutil.GenerateToken(user.ID.Hex(), s.JWTKey, 1*time.Hour)
+	if err != nil {
+		log.Printf("Login: ошибка при генерации токена: %v", err)
+		return nil, status.Error(codes.Internal, "Ошибка при генерации токена")
+	}
 	return &ssoV1.LoginResponse{Token: token}, nil
 }
 

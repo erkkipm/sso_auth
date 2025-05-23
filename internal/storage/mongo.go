@@ -70,10 +70,10 @@ func (s *Storage) GetUserByEmailAndApp(ctx context.Context, u models.User) (*mod
 	return &user, nil
 }
 
-func (s *Storage) FindUser(ctx context.Context, appID, email string) (models.User, error) {
+func (s *Storage) FindUser(ctx context.Context, appID, email string) (*models.User, error) {
 	var user models.User
 	err := s.Collection.FindOne(ctx, bson.M{"app_id": appID, "email": email}).Decode(&user)
-	return user, err
+	return &user, err
 }
 
 func (s *Storage) UpdatePassword(ctx context.Context, appID, email, newHash string) error {
