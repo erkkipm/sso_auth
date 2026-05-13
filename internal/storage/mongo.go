@@ -73,6 +73,9 @@ func (s *Storage) GetUserByEmailAndApp(ctx context.Context, u models.User) (*mod
 func (s *Storage) FindUser(ctx context.Context, appID, email string) (*models.User, error) {
 	var user models.User
 	err := s.Collection.FindOne(ctx, bson.M{"app_id": appID, "email": email}).Decode(&user)
+	if errors.Is(err, mongo.ErrNoDocuments) {
+		return nil, err
+	}
 	return &user, err
 }
 

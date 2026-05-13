@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"github.com/erkkipm/sso_auth/internal/models"
 	"github.com/erkkipm/sso_auth/internal/storage"
 	"github.com/erkkipm/sso_auth/pkg/jwtutil"
 	ssoV1 "github.com/erkkipm/sso_proto/gen/go"
+	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -32,7 +34,15 @@ func NewServerAPI(s *storage.Storage, jwtKey string) *ServerAPI {
 func (s *ServerAPI) Register(ctx context.Context, r *ssoV1.RegisterRequest) (*ssoV1.RegisterResponse, error) {
 	log.Printf("Register: входящий запрос: логин=%s телефон=%s Приложение=%s", r.Email, r.Phone, r.AppId)
 
-	hash, _ := bcrypt.GenerateFromPassword([]byte(r.Password), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(r.Password), bcrypt.DefaultCost)
+	if err != nil {
+		log.Printf("Register: ошибка хеширования пароля: %v", err)
+		return &ssoV1.RegisterResponse{
+			Success: false,
+			Message: "Внутренняя ошибка сервера",
+		}, status.Error(codes.Internal, "Ошибка хеширования пароля")
+	}
+
 	user := models.User{
 		AppID:     r.AppId,
 		Email:     r.Email,
@@ -42,19 +52,19 @@ func (s *ServerAPI) Register(ctx context.Context, r *ssoV1.RegisterRequest) (*ss
 	}
 
 	existing, err := s.Store.GetUserByEmailAndApp(ctx, user)
-	if err != nil {
+	if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
 		log.Printf("Register: ошибка при обращении к базе: %v", err)
 		return &ssoV1.RegisterResponse{
 			Success: false,
-			Message: "Ошибка доступа! Сервис недоступен. Попробуйте снова чуток позже",
-		}, err
+			Message: "Ошибка доступа! Сервис недоступен. Попробуйте снова чуть позже",
+		}, status.Error(codes.Internal, "Ошибка обращения к базе")
 	}
 	if existing != nil {
-		log.Printf("Register: ошибка при проверки пользователя на уникальноссть: %v", err)
+		log.Printf("Register: пользователь %s уже существует", r.Email)
 		return &ssoV1.RegisterResponse{
 			Success: false,
-			Message: "Пользователь с таким логином уже есть!",
-		}, nil
+			Message: "Пользователь с таким email уже есть!",
+		}, status.Error(codes.AlreadyExists, "Пользователь с таким email уже существует")
 	}
 
 	if err := s.Store.CreateUser(ctx, user); err != nil {
@@ -62,7 +72,7 @@ func (s *ServerAPI) Register(ctx context.Context, r *ssoV1.RegisterRequest) (*ss
 		return &ssoV1.RegisterResponse{
 			Success: false,
 			Message: "Ошибка подключения к базе: " + err.Error(),
-		}, nil
+		}, status.Error(codes.Internal, "Ошибка создания пользователя")
 	}
 
 	log.Printf("Register: пользователь %s успешно создан", r.Email)
@@ -74,28 +84,34 @@ func (s *ServerAPI) Register(ctx context.Context, r *ssoV1.RegisterRequest) (*ss
 }
 
 // Login ...
-func (s *ServerAPI) Login(ctx context.Context, r *ssoV1.LoginRequest) (*ssoV1.LoginResponse, error) {
-	user, err := s.Store.FindUser(ctx, r.AppId, r.Email)
-	log.Printf("Login: user", user)
-	log.Printf("Login: входящий запрос: логин=%s Приложение=%s. ID=%s", r.Email, r.AppId, user.ID.Hex())
-	if err != nil {
-		log.Printf("Login: пользователь не найден: %v", err)
+func (s *ServerAPI) Login(ctx context.Context, req *ssoV1.LoginRequest) (*ssoV1.LoginResponse, error) {
+	user, err := s.Store.FindUser(ctx, req.AppId, req.Email)
+	if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
+		log.Printf("Login: ошибка поиска пользователя (%s): %v", req.Email, err)
+		return nil, status.Error(codes.Internal, "Ошибка сервера, попробуйте позже")
+	}
+	if err == nil && user == nil {
+		log.Printf("Login: пользователь не найден (%s)", req.Email)
 		return nil, status.Error(codes.NotFound, "Пользователь с таким email не найден")
 	}
 	if user == nil {
-		log.Printf("Login: пользователь не найден (nil)")
+		log.Printf("Login: пользователь не найден (%s)", req.Email)
 		return nil, status.Error(codes.NotFound, "Пользователь с таким email не найден")
 	}
-	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(r.Password)) != nil {
-		log.Printf("Login: неверный пароль для %s.", r.Email)
+
+	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)) != nil {
+		log.Printf("Login: неверный пароль для %s.", req.Email)
 		return nil, status.Error(codes.Unauthenticated, "Неверный пароль")
 	}
-	token, err := jwtutil.GenerateToken(user.ID.Hex(), s.JWTKey, 1*time.Hour)
+
+	token, err := jwtutil.GenerateToken(user.ID.Hex(), user.Email, user.Phone, s.JWTKey, 1*time.Hour)
 	if err != nil {
 		log.Printf("Login: ошибка при генерации токена: %v", err)
 		return nil, status.Error(codes.Internal, "Ошибка при генерации токена")
 	}
-	return &ssoV1.LoginResponse{Token: token}, nil
+	return &ssoV1.LoginResponse{
+		Token: token,
+	}, nil
 }
 
 //// ChangePassword ...

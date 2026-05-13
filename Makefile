@@ -1,92 +1,142 @@
-# Переменные окружения
-NAME_APP = sso_auth
-APP_MAIN_GO = ./server/main.go
-#CONFIG_APP = ./configs/config_prod.yaml
-#NAME_DB = sso_auth
-#DB_USER = sso_auth
-#DB_PASS = ErkkiSofit9944
+APP_BIN = ./build/app
+APP_MAIN = ./server/main.go
+APP_CONFIG = ./configs/config_prod.yaml
+
 DB_PORT = 38841
-DB_PATH = /Users/erkkipuolakainen/data/db/
-#GEN_DIR = ./gen/
-#PROTO_DIR = ./proto/
+HOME := $(shell echo $$HOME)
+DB_USER = sso_auth
+DB_PASS = ErkkiSofit9944
+DB_PATH = $(HOME)/data/db
+DB_LOG = ./log/mongo.log
 
+USE_SUDO = sudo
 
-# Установка зависимостей, сборка, запуск Mongo и создание пользователя
-.PHONY: all
-all: tidy mongo-start run
-#all: mongo-stop clean build mongo-start mongo-create-user run
-#all: mongo-stop tidy clean build mongo-start mongo-create-user gen run
+.PHONY: all start install tidy build run check-ffprobe \
+        mongodb-kill mongodb-clean mongodb-init-user mongodb-start mongodb
 
-# Установка зависимостей
-.PHONY: tidy
+#  Запуск при запущенном монгодиби
+start: run-app
+
+# Полная сборка
+run: build run
+
+# ЖЕСТКИЙ РЕСТАРТ
+install: tidy check-ffprobe mongodb
+
+# Проверка ffprobe и ffmpeg
+check-ffprobe:
+	@echo "== Проверка ffprobe =="
+	@if ! command -v ffprobe >/dev/null 2>&1; then \
+		echo "⚠️  ffprobe не найден. Устанавливаем ffmpeg..."; \
+		brew install ffmpeg || { echo "❌ Не удалось установить ffmpeg"; exit 1; }; \
+	else \
+		echo "✅ ffprobe уже установлен"; \
+	fi
+	@ffprobe -v error \
+		-show_entries format=format_name \
+		-of default=noprint_wrappers=1:nokey=1 \
+		./test.mov || echo "⚠️  Файл ./test.mov не прошёл проверку"
+
+# Установка зависимостей Go
 tidy:
 	@echo "======= Установка зависимостей ========"
-	@go mod tidy && echo " ✅  Зависимости установлены!" || echo " ❌  Зависимости не установлены!"
+	@go mod tidy && echo " ✅  Зависимости установлены!" || echo " ❌  Ошибка установки зависимостей"
 
-# Очистка
-#.PHONY: clean
-#clean:
-#	@echo "======= Удаление старых файлов ========"
-#	@rm -rf ./build/ && echo " ✅  Старые файлы удалены!"
+# Сборка приложения
+build:
+	@echo "======= Сборка приложения ========"
+	@mkdir -p build
+	@mkdir -p ./log
+	@go build -o $(APP_BIN) $(APP_MAIN) && echo " ✅  Сборка успешна!" || { echo " ❌  Ошибка сборки"; exit 1; }
 
-# Сборка
-#.PHONY: build
-#build:
-#	@echo "======= Сборка приложения ========"
-#	@mkdir -p ./build/
-#	@go build -o ./build/sso_auth ./server/main.go && echo " ✅  Сборка успешна!" || echo " ❌  Ошибка сборки!"
-
-# Остановка MongoDB
-#.PHONY: mongo-stop
-#mongo-stop:
-#	@echo "======= Остановка MongoDB... ========"
-#	@brew services stop mongodb/brew/mongodb-community && echo " ✅  MongoDB остановлен" || echo " ❌  MongoDB не найден."
-#	@sudo mongosh --port $(DB_PORT) --eval "db.shutdownServer()" && \
-#		echo " ❌  MongoDB на порту $(DB_PORT) пришлось остановить принудительно!" || \
-#		echo " ✅  MongoDB не запущен!"
-
-# Запуск MongoDB
-.PHONY: mongo-start
-mongo-start:
-	@echo "======= Запуск MongoDB ========"
-	@if nc -z 127.0.0.1 $(DB_PORT); then \
-		echo "✅  MongoDB уже запущен на порту $(DB_PORT)."; \
-	else \
-		echo "✅  MongoDB не запущен. Пытаемся стартовать..."; \
-		sudo mongod \
-			--dbpath=$(DB_PATH) \
-			--port=$(DB_PORT) \
-			--logpath=$(DB_PATH)/mongod.log \
-			--logappend \
-			--fork \
-			--bind_ip 127.0.0.1 || echo "❌ Не удалось запустить MongoDB"; \
-		sleep 2; \
-		if nc -z 127.0.0.1 $(DB_PORT); then echo "✅  MongoDB успешно запущен."; \
-		else echo "❌  MongoDB не слушает порт. Последние строки лога:"; tail -n 20 $(DB_PATH)/mongod.log; false; fi; \
-	fi
-
-# Создание пользователя MongoDB
-#.PHONY: mongo-create-user
-#mongo-create-user:
-#	@echo "======= Создание пользователя MongoDB ========"
-#	@mongosh --port $(DB_PORT) --eval 'db.getSiblingDB("admin").createUser({user: "$(DB_USER)", pwd: "$(DB_PASS)", roles: [{role: "readWrite", db: "$(NAME_DB)"}]})' \
-#	&& echo "✅ Пользователь $(DB_USER) создан в admin" \
-#	|| echo "✅ Возможно, пользователь уже существует в admin."
-#	@mongosh --port $(DB_PORT) --eval 'db.getSiblingDB("$(NAME_DB)").createUser({user: "$(DB_USER)", pwd: "$(DB_PASS)", roles: [{role: "readWrite", db: "$(NAME_DB)"}]})' \
-#	&& echo "✅ Пользователь $(DB_USER) создан в базе $(NAME_DB)" \
-#	|| echo "✅ Возможно, пользователь уже существует в $(NAME_DB)."
-#
-#	@echo "======= Проверка пользователя в admin ========"
-#	@mongosh admin --port $(DB_PORT) --eval 'u = db.getUser("$(DB_USER)"); if (u) { printjson(u) } else { print("❌ Пользователь не найден в admin") }' \
-#	|| echo "⚠️ Не удалось подключиться к MongoDB admin"
-#
-#	@echo "======= Проверка пользователя в базе $(NAME_DB) ========"
-#	@mongosh $(NAME_DB) --port $(DB_PORT) --eval 'u = db.getUser("$(DB_USER)"); if (u) { printjson(u) } else { print("❌ Пользователь не найден в $(NAME_DB)") }' \
-#	|| echo "⚠️ Не удалось подключиться к MongoDB $(NAME_DB)"
-
-
-.PHONY: run
+# Запуск приложения
 run:
 	@echo "======= Запуск приложения ========"
-	@go run $(APP_MAIN_GO)  && echo " ✅  Приложение запущено!" || echo " ❌  Приложение не запущено!"
+	@env CONFIG-PATH=$(APP_CONFIG) $(APP_BIN)
+
+
+run-app:
+	@echo "🧪 Проверка доступности MongoDB на порту $(DB_PORT)..."
+	@if nc -z 127.0.0.1 $(DB_PORT); then \
+		echo "✅ MongoDB уже запущен."; \
+	else \
+		echo "⚠️  MongoDB не запущен. Запускаем MongoDB..."; \
+		make mongodb-start || { echo '❌ Не удалось запустить MongoDB'; exit 1; }; \
+	fi
+	@echo "🧹 Удаляем старую сборку (если есть)..."
+	@rm -f $(APP_BIN)
+	@echo "🔨 Собираем приложение..."
+	@make build
+	@echo "🚀 Запускаем приложение..."
+	@env CONFIG-PATH=$(APP_CONFIG) $(APP_BIN)
+
+
+# MongoDB: полный цикл инициализации и запуска
+
+# Убить mongod на нужном порту
+mongodb-kill:
+	@echo "⛔️ Завершаем все mongod на порту $(DB_PORT)..."
+	@sudo rm -f /tmp/mongodb-$(DB_PORT).sock
+	@lsof -ti tcp:$(DB_PORT) | xargs -r kill
+	@ps aux | grep mongod || true
+
+# Почистить lock-файл
+mongodb-clean:
+	@if [ -f $(DB_PATH)/$(DB_USER)/mongod.lock ]; then \
+		rm -f $(DB_PATH)/$(DB_USER)/mongod.lock; \
+	fi
+	@if [ -f $(DB_PATH)/$(DB_USER)/storage.bson ]; then \
+		rm -f $(DB_PATH)/$(DB_USER)/storage.bson; \
+	fi
+	@if [ -d $(DB_PATH)/$(DB_USER) ]; then \
+		sudo chown -R $(USER):staff $(DB_PATH)/$(DB_USER); \
+	fi
+
+# Инициализация пользователя (запуск без авторизации, создание юзера, остановка)
+mongodb-init-user: mongodb-kill mongodb-clean
+	@echo "➡️  Запускаем mongod без авторизации для инициализации пользователя..."
+	@mkdir -p $(DB_PATH)/$(DB_USER)/ && echo "Папка для хранилища MongoDB создана" || echo "ОШИБКА! Папка не создана"
+	@rm -rf ./log && mkdir -p ./log
+	@rm -f $(DB_PATH)/$(DB_USER)/mongod.lock
+	@rm -f ./log/mongo.log
+	@mongod --port $(DB_PORT) --dbpath $(DB_PATH)/$(DB_USER)/ --bind_ip 127.0.0.1 --noauth --fork --logpath $(DB_LOG) --logappend
+	@sleep 2
+	@echo "➡️  Проверяем наличие пользователя $(DB_USER)..."
+	@if mongosh admin --port $(DB_PORT) --quiet --eval '!!db.getUser("$(DB_USER)")' 2>/dev/null | grep -q true; then \
+		echo "⚠️  Пользователь \033[1m$(DB_USER)\033[0m уже существует в MongoDB на порту $(DB_PORT)."; \
+		echo "❗️ ВСЕ данные в $(DB_PATH)/$(DB_USER)/ будут безвозвратно удалены."; \
+		read -p "❓ Вы уверены, что хотите продолжить? (yes/[no]): " confirm; \
+		if [ "$$confirm" = "yes" ]; then \
+			echo "🧨 Удаляем старую базу данных..."; \
+			$(USE_SUDO) pkill -f "mongod.*$(DB_PORT)" || true; \
+			sleep 2; \
+			$(USE_SUDO) rm -rf $(DB_PATH)/$(DB_USER)/; \
+			mkdir -p $(DB_PATH)/$(DB_USER)/; \
+			mongod --port $(DB_PORT) --dbpath $(DB_PATH)/$(DB_USER)/ --bind_ip 127.0.0.1 --noauth --fork --logpath $(DB_LOG) --logappend; \
+			sleep 2; \
+		else \
+			echo "🚫 Отмена. База данных и пользователь сохранены."; \
+			pkill -f "mongod.*$(DB_PORT)" || true; \
+			exit 1; \
+		fi \
+	fi
+	@mongosh admin --port $(DB_PORT) --eval 'db.createUser({user: "$(DB_USER)", pwd: "$(DB_PASS)", roles: [{ role: "readWrite", db: "$(DB_USER)" }, { role: "readWrite", db: "admin" }]})'
+	@mongosh admin --port $(DB_PORT) --eval 'db.getUsers()'
+	@pkill -f "mongod.*$(DB_PORT)" || true
+	@sleep 2
+	@echo "✅ Пользователь создан!"
+
+
+# Запуск mongod с авторизацией
+mongodb-start: mongodb-clean
+	@mongod --port $(DB_PORT) --dbpath $(DB_PATH)/$(DB_USER)/ \
+		--bind_ip 127.0.0.1 --auth --fork --logpath $(DB_LOG) --logappend || { \
+		echo "❌ Ошибка запуска MongoDB. Вывод лога:"; \
+		cat $(DB_LOG); exit 1; }
+		@sleep 2
+	@echo "✅ MongoDB запущен с авторизацией на порту $(DB_PORT)"
+
+# Основная задача для базы: kill, clean, create user, старт
+mongodb: mongodb-init-user mongodb-start
+
 

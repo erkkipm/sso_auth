@@ -3,7 +3,7 @@ module github.com/erkkipm/sso_auth
 go 1.24
 
 require (
-	github.com/erkkipm/sso_proto v0.0.0-20250513151949-0b51ad45da9d
+	github.com/erkkipm/sso_proto v0.5.3
 	github.com/fatih/color v1.18.0
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/ilyakaznacheev/cleanenv v1.5.0
