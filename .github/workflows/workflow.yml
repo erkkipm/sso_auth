@@ -72,8 +72,17 @@ jobs:
         run: |
           ssh -t -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} << 'EOF'
           set -euo pipefail
+          if ! command -v git >/dev/null 2>&1; then
+          apt-get update -y
+          apt-get install -y git ca-certificates
+          fi
+          export PATH=/usr/local/go/bin:$PATH
+          export GOPROXY="https://goproxy.ru,direct"
+          export GOPRIVATE="github.com/erkkipm/*"
+          export GONOSUMDB="github.com/erkkipm/*"
           mkdir -p ${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/
           cd ${{ env.ROOT_DIR }}${{env.NAME_APP}}
+          timeout 300 go mod download
           if GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
           go build -o "${{ env.ROOT_DIR }}${{env.NAME_APP}}/build/${{env.NAME_APP}}" "${{ env.ROOT_DIR }}${{env.NAME_APP}}${{env.GO_MAIN_FILE}}"; then 
           echo "✅ ✅ Приложение собрано!"
