@@ -59,8 +59,22 @@ func main() {
 	// Регистрируем наш сервис Users на gRPC-сервере
 	ssov1.RegisterAuthServer(gRPCServer, handlers.NewServerAPI(store, cfg.JWTKey))
 	log.Info("ПРИЛОЖЕНИЕ: Запущено!", slog.String("порт", cfg.GRPC.Port))
-	// Запускаем сервер (блокирующий вызов)
-	if err := gRPCServer.Serve(lis); err != nil {
+
+	// Запускаем сервер в горутине, чтобы не блокировать обработку сигналов
+	serveErr := make(chan error, 1)
+	go func() {
+		if err := gRPCServer.Serve(lis); err != nil {
+			serveErr <- err
+		}
+	}()
+
+	// Ожидаем сигнал завершения (SIGTERM/SIGINT) или ошибку сервера
+	select {
+	case <-ctx.Done():
+		log.Info("ПРИЛОЖЕНИЕ: Получен сигнал завершения, graceful shutdown...")
+		gRPCServer.GracefulStop()
+		log.Info("ПРИЛОЖЕНИЕ: Остановлено.")
+	case err := <-serveErr:
 		log.Error("ОШИБКА ПРИЛОЖЕНИЯ:", sl.Err(err))
 		os.Exit(1)
 	}
