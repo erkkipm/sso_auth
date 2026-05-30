@@ -10,7 +10,6 @@ type User struct {
 	AppID     string             `bson:"app_id"`
 	Email     string             `bson:"email"`
 	Password  string             `bson:"password"`
-	PassHash  []byte             `bson:"pass_hash"`
 	Phone     string             `bson:"phone"`
 	CreatedAt time.Time          `bson:"created_at"`
 }

@@ -27,7 +27,8 @@ func main() {
 	cfg := configs.GetConfig()
 
 	// КОНТЕКСТ. ЗАПУСКАЕМ ЛОГГЕР
-	log := logger.SetupLogger(cfg.Env, cfg.NameProject)
+	log, closeLog := logger.SetupLogger(cfg.Env, cfg.NameProject)
+	defer closeLog()
 	log.Info("КОНФИГУРАЦИЯ. Успешно!", slog.String("project", cfg.NameProject))
 	log.Info("ЛОГГЕР. Успешно!")
 	log.Debug("ВКЛЮЧЕН РЕЖИМ ДЕБАГ!")
@@ -44,7 +45,7 @@ func main() {
 		log.Error("БД. Ошибка подключения к MongoDB:", sl.Err(err))
 		os.Exit(1)
 	} else {
-		log.Info("БД. Успешно подключена!", slog.String("mongodb://localhost:", cfg.MongoDB.Port+"/"+cfg.MongoDB.Username+"/"+cfg.MongoDB.Collection.Users))
+		log.Info("БД. Успешно подключена!", slog.String("uri", "mongodb://"+cfg.MongoDB.Host+":"+cfg.MongoDB.Port+"/"+cfg.MongoDB.Database))
 	}
 
 	// Создаем TCP-листенер для gRPC

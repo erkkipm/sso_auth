@@ -16,7 +16,6 @@ const (
 	ConfigPathConst    = "configs/config_prod.yaml"
 )
 
-var configPath string
 var configMap *Config
 var once sync.Once
 

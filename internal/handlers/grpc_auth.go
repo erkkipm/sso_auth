@@ -71,7 +71,7 @@ func (s *ServerAPI) Register(ctx context.Context, r *ssoV1.RegisterRequest) (*ss
 		log.Printf("Register: ошибка при создании пользователя: %v", err)
 		return &ssoV1.RegisterResponse{
 			Success: false,
-			Message: "Ошибка подключения к базе: " + err.Error(),
+			Message: "Ошибка подключения к базе данных",
 		}, status.Error(codes.Internal, "Ошибка создания пользователя")
 	}
 
@@ -89,10 +89,6 @@ func (s *ServerAPI) Login(ctx context.Context, req *ssoV1.LoginRequest) (*ssoV1.
 	if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
 		log.Printf("Login: ошибка поиска пользователя (%s): %v", req.Email, err)
 		return nil, status.Error(codes.Internal, "Ошибка сервера, попробуйте позже")
-	}
-	if err == nil && user == nil {
-		log.Printf("Login: пользователь не найден (%s)", req.Email)
-		return nil, status.Error(codes.NotFound, "Пользователь с таким email не найден")
 	}
 	if user == nil {
 		log.Printf("Login: пользователь не найден (%s)", req.Email)

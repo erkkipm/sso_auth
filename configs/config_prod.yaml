@@ -5,10 +5,7 @@ name_project: "sso_auth"
 jwt_key: ErkkiSofit9944
 token_ttl: 3600
 grpc:
-  ip: "0.0.0.0"
   port: "50051"
-  read-timeout: "10s"
-  write-timeout: "10s"
 
 mongodb:
   host: 127.0.0.1
